@@ -2,6 +2,8 @@
 
 Command-line helper to pull recent Micro E-mini S&P 500 (MES) data from Finnhub, compute intraday reference levels, and print a quick trading bias summary.
 
+This repository contains only a command-line script; there is no separate frontend or backend service. The helper runs locally to fetch data from Finnhub and prints the computed levels directly to your terminal.
+
 ## Setup
 1. Use Python 3.10+.
 2. Install dependencies:
