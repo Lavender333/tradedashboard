@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trade Dashboard</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+          'Segoe UI', sans-serif;
+        line-height: 1.5;
+        font-size: 16px;
+      }
+
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #0b1120 0%, #1d283a 50%, #111827 100%);
+        color: #f9fafb;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 3rem 1.5rem 2rem;
+        text-align: center;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+        letter-spacing: -0.03em;
+      }
+
+      p.lead {
+        margin: 0.75rem auto 0;
+        max-width: 42rem;
+        color: #cbd5f5;
+        font-size: 1.05rem;
+      }
+
+      main {
+        width: min(1200px, 92vw);
+        margin: 2rem auto 4rem;
+        display: grid;
+        gap: 2rem;
+      }
+
+      section.card {
+        background: rgba(17, 24, 39, 0.85);
+        border-radius: 1rem;
+        padding: 1.75rem;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.45);
+        border: 1px solid rgba(99, 102, 241, 0.35);
+      }
+
+      section.card h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.4rem;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: auto !important;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      th {
+        color: #a5b4fc;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+
+      tbody tr:hover {
+        background: rgba(79, 70, 229, 0.15);
+      }
+
+      .kpis {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .kpi {
+        padding: 1.5rem;
+        background: rgba(30, 41, 59, 0.75);
+        border-radius: 0.9rem;
+        border: 1px solid rgba(79, 70, 229, 0.35);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+
+      .kpi span.label {
+        display: block;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .kpi span.value {
+        display: block;
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin-top: 0.35rem;
+        letter-spacing: -0.02em;
+      }
+
+      footer {
+        text-align: center;
+        padding: 2rem 1.5rem 3rem;
+        color: #94a3b8;
+        font-size: 0.85rem;
+      }
+
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.4rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin-top: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      a.button:hover,
+      a.button:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
+      }
+
+      @media (max-width: 720px) {
+        header {
+          padding: 2.5rem 1.25rem 1.5rem;
+        }
+
+        section.card {
+          padding: 1.5rem;
+        }
+
+        table {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Trade Dashboard</h1>
+      <p class="lead">
+        Monitor your portfolio performance, open positions, and the most
+        recent trades at a glance. This lightweight preview is built with
+        vanilla HTML, CSS, and Chart.js so you can host it anywhere.
+      </p>
+      <a class="button" href="#activity">Jump to activity</a>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Portfolio Overview</h2>
+        <div class="kpis">
+          <div class="kpi">
+            <span class="label">Net Asset Value</span>
+            <span class="value">$128,450</span>
+          </div>
+          <div class="kpi">
+            <span class="label">Daily P&amp;L</span>
+            <span class="value">+$2,470</span>
+          </div>
+          <div class="kpi">
+            <span class="label">Win Rate</span>
+            <span class="value">62%</span>
+          </div>
+          <div class="kpi">
+            <span class="label">Sharpe Ratio</span>
+            <span class="value">1.47</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Equity Curve</h2>
+        <canvas id="equityChart" height="320"></canvas>
+      </section>
+
+      <section id="activity" class="card">
+        <h2>Latest Trades</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Symbol</th>
+              <th>Side</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2024-04-29 15:35</td>
+              <td>AAPL</td>
+              <td>Buy</td>
+              <td>120</td>
+              <td>$168.34</td>
+              <td style="color: #22c55e">+$540</td>
+            </tr>
+            <tr>
+              <td>2024-04-29 14:18</td>
+              <td>TSLA</td>
+              <td>Sell</td>
+              <td>45</td>
+              <td>$187.12</td>
+              <td style="color: #ef4444">-$215</td>
+            </tr>
+            <tr>
+              <td>2024-04-29 13:02</td>
+              <td>MSFT</td>
+              <td>Buy</td>
+              <td>80</td>
+              <td>$309.88</td>
+              <td style="color: #22c55e">+$320</td>
+            </tr>
+            <tr>
+              <td>2024-04-29 11:54</td>
+              <td>NVDA</td>
+              <td>Buy</td>
+              <td>30</td>
+              <td>$782.44</td>
+              <td style="color: #22c55e">+$910</td>
+            </tr>
+            <tr>
+              <td>2024-04-29 10:10</td>
+              <td>AMZN</td>
+              <td>Sell</td>
+              <td>35</td>
+              <td>$176.19</td>
+              <td style="color: #ef4444">-$115</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      Crafted for quick previews. Replace the static data with your live feed
+      to connect it to your own trade infrastructure.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script>
+      const ctx = document.getElementById('equityChart');
+
+      const gradient = (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 300;
+        const gradientCtx = canvas.getContext('2d');
+        const gradientFill = gradientCtx.createLinearGradient(0, 0, 0, 300);
+        gradientFill.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
+        gradientFill.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
+        return gradientFill;
+      })();
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [
+            'Mar 1',
+            'Mar 8',
+            'Mar 15',
+            'Mar 22',
+            'Mar 29',
+            'Apr 5',
+            'Apr 12',
+            'Apr 19',
+            'Apr 26',
+          ],
+          datasets: [
+            {
+              label: 'Net Asset Value',
+              data: [
+                101200,
+                101950,
+                102340,
+                103850,
+                104420,
+                106180,
+                107240,
+                108620,
+                109980,
+              ],
+              fill: true,
+              backgroundColor: gradient,
+              borderColor: '#818cf8',
+              borderWidth: 3,
+              tension: 0.34,
+              pointRadius: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(148, 163, 184, 0.15)',
+              },
+              ticks: {
+                color: '#cbd5f5',
+              },
+            },
+            y: {
+              grid: {
+                color: 'rgba(148, 163, 184, 0.15)',
+              },
+              ticks: {
+                callback: (value) => `$${value.toLocaleString()}`,
+                color: '#cbd5f5',
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              backgroundColor: 'rgba(30, 41, 59, 0.92)',
+              borderColor: 'rgba(99, 102, 241, 0.45)',
+              borderWidth: 1,
+              callbacks: {
+                label: (context) => {
+                  const value = context.parsed.y;
+                  return ` $${value.toLocaleString()}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
