@@ -1,0 +1,5 @@
+pandas
+colorama
+Flask
+yfinance
+numpy
