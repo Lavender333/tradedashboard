@@ -1,6 +1,6 @@
 # tradedashboard
 
-Tools to pull recent Micro E-mini S&P 500 (MES) data from Finnhub, compute intraday reference levels, and show a trading bias summary. You can run it as a terminal helper or as a lightweight Flask dashboard ("Lavender mode").
+Tools to pull recent Micro E-mini S&P 500 (MES) data from Alpha Vantage, compute intraday reference levels, and show a trading bias summary. You can run it as a terminal helper or as a lightweight Flask dashboard ("Lavender mode").
 
 ## Setup
 1. Use Python 3.10+.
@@ -8,9 +8,10 @@ Tools to pull recent Micro E-mini S&P 500 (MES) data from Finnhub, compute intra
    ```bash
    pip install -r requirements.txt
    ```
-3. Export your Finnhub API key so the script can authenticate:
+3. Export your Alpha Vantage API key so the script can authenticate (a default key is bundled for convenience, but you should re
+place it with your own for reliability):
    ```bash
-   export FINNHUB_API_KEY="your_api_key"
+   export ALPHAVANTAGE_API_KEY="your_api_key"
    ```
 
 ## Usage
@@ -35,4 +36,4 @@ The page auto-refreshes every 60 seconds and shows the same breakout/breakdown l
 
 ## Notes
 - The script requires at least 20 candles to compute ATR. If fewer candles are returned, it will raise an error.
-- Finnhub may rate-limit requests; re-run the script if you hit a transient failure.
+- Alpha Vantage may rate-limit requests; re-run the script if you hit a transient failure.

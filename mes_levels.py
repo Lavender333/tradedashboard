@@ -1,13 +1,12 @@
 """Core logic for MES live level calculations and snapshot generation."""
 
 import os
-import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple
 
-import finnhub
 import pandas as pd
+import requests
 
 SYMBOL = "MES=F"          # Micro E-mini S&P 500 futures
 RESOLUTION = "15"         # 15-minute candles
@@ -15,35 +14,58 @@ LOOKBACK_HOURS = 24        # History window
 ROUND_TO = 5.0             # Round levels to nearest 5 points
 
 
-def get_client() -> finnhub.Client:
-    """Instantiate a Finnhub client using the FINNHUB_API_KEY environment variable."""
-    api_key = os.environ.get("FINNHUB_API_KEY")
-    if not api_key:
-        raise RuntimeError("FINNHUB_API_KEY not found. Set it as an environment variable.")
-    return finnhub.Client(api_key=api_key)
+def _get_api_key() -> str:
+    """Resolve the Alpha Vantage API key, falling back to the provided default."""
+    return os.environ.get("ALPHAVANTAGE_API_KEY", "MTGUW7LBO905QET0")
 
 
-def fetch_candles(client: finnhub.Client) -> pd.DataFrame:
-    """Fetch recent MES candles and return as a clean DataFrame."""
-    now = int(time.time())
-    start = int((datetime.now() - timedelta(hours=LOOKBACK_HOURS)).timestamp())
+def fetch_candles() -> pd.DataFrame:
+    """Fetch recent MES candles from Alpha Vantage and return as a clean DataFrame."""
+    api_key = _get_api_key()
+    params = {
+        "function": "TIME_SERIES_INTRADAY",
+        "symbol": SYMBOL,
+        "interval": f"{RESOLUTION}min",
+        "outputsize": "compact",
+        "datatype": "json",
+        "apikey": api_key,
+    }
 
-    raw = client.stock_candles(SYMBOL, RESOLUTION, start, now)
-    if raw.get("s") != "ok":
-        raise RuntimeError(f"Finnhub candle request failed: {raw}")
+    response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+    response.raise_for_status()
+    payload = response.json()
 
-    df = pd.DataFrame(raw)
-    df.rename(columns={
-        "c": "close",
-        "h": "high",
-        "l": "low",
-        "o": "open",
-        "v": "volume",
-        "t": "ts",
-    }, inplace=True)
+    if "Error Message" in payload:
+        raise RuntimeError(f"Alpha Vantage request failed: {payload['Error Message']}")
+    if "Note" in payload and not payload.get("Time Series (15min)"):
+        raise RuntimeError(f"Alpha Vantage notice: {payload['Note']}")
 
-    df["time"] = pd.to_datetime(df["ts"], unit="s")
-    df = df[["time", "open", "high", "low", "close", "volume"]].sort_values("time").reset_index(drop=True)
+    raw_series = payload.get("Time Series (15min)") or {}
+    if not raw_series:
+        raise RuntimeError("No candle data returned from Alpha Vantage.")
+
+    rows = []
+    for ts_str, values in raw_series.items():
+        ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        rows.append(
+            {
+                "time": ts,
+                "open": float(values["1. open"]),
+                "high": float(values["2. high"]),
+                "low": float(values["3. low"]),
+                "close": float(values["4. close"]),
+                "volume": float(values.get("5. volume", 0)),
+            }
+        )
+
+    df = pd.DataFrame(rows).sort_values("time").reset_index(drop=True)
+
+    # Filter to the configured lookback window
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
+    df = df[df["time"] >= cutoff].reset_index(drop=True)
+    if df.empty:
+        raise RuntimeError("No candle data available within the requested lookback window.")
+
     return df
 
 
@@ -140,8 +162,7 @@ def determine_bias(last_close: float, levels: Levels, atr: float) -> Tuple[str, 
 
 def get_snapshot() -> Dict[str, object]:
     """Return the latest candle snapshot with levels and bias guidance."""
-    client = get_client()
-    df = fetch_candles(client)
+    df = fetch_candles()
     if len(df) < 20:
         raise RuntimeError("Not enough candle data to compute ATR/levels.")
 

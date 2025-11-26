@@ -1,13 +1,6 @@
 from colorama import Fore, Style, init
 
-from mes_levels import (
-    RESOLUTION,
-    compute_atr,
-    compute_levels,
-    determine_bias,
-    fetch_candles,
-    get_client,
-)
+from mes_levels import RESOLUTION, compute_atr, compute_levels, determine_bias, fetch_candles
 
 # Initialize colorama (for colored terminal output)
 init(autoreset=True)
@@ -55,8 +48,7 @@ def print_bias_section(bias: str, action: str) -> None:
 def main() -> None:
     """Execute the MES level calculation workflow."""
     print_header()
-    client = get_client()
-    df = fetch_candles(client)
+    df = fetch_candles()
 
     if len(df) < 20:
         raise RuntimeError("Not enough candle data to compute ATR/levels.")

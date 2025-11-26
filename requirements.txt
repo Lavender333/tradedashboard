@@ -1,4 +1,4 @@
-finnhub-python
+requests
 pandas
 colorama
 Flask
