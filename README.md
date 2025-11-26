@@ -1,8 +1,6 @@
 # tradedashboard
 
-Command-line helper to pull recent Micro E-mini S&P 500 (MES) data from Finnhub, compute intraday reference levels, and print a quick trading bias summary.
-
-This repository contains only a command-line script; there is no separate frontend or backend service. The helper runs locally to fetch data from Finnhub and prints the computed levels directly to your terminal.
+Tools to pull recent Micro E-mini S&P 500 (MES) data from Finnhub, compute intraday reference levels, and show a trading bias summary. You can run it as a terminal helper or as a lightweight Flask dashboard ("Lavender mode").
 
 ## Setup
 1. Use Python 3.10+.
@@ -16,6 +14,8 @@ This repository contains only a command-line script; there is no separate fronte
    ```
 
 ## Usage
+
+### Terminal helper
 Run the helper to fetch the last 24 hours of 15-minute MES candles, compute ATR-based levels, and output guidance:
 
 ```bash
@@ -23,6 +23,15 @@ python mes_live_levels.py
 ```
 
 The script prints breakout/breakdown levels, dip-buy and supply zones, plus a directional bias suggestion. Levels are rounded to the nearest five points to keep the zones clean.
+
+### Lavender dashboard (Flask)
+Start the minimal dashboard and open it in your browser (defaults to http://localhost:8000):
+
+```bash
+python lavender_dashboard.py
+```
+
+The page auto-refreshes every 60 seconds and shows the same breakout/breakdown lines, dip and supply zones, ATR, and bias text. The JSON powering the page is available at `/api/snapshot`.
 
 ## Notes
 - The script requires at least 20 candles to compute ATR. If fewer candles are returned, it will raise an error.
