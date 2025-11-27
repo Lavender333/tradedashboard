@@ -4,10 +4,21 @@ Tools to pull recent S&P 500 Futures (ES=F) data from Yahoo Finance, compute int
 
 ## Setup
 1. Use Python 3.10+.
-2. Install dependencies:
+2. Make sure you have `pip` available.
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
+
+## View the dashboard on your computer
+1. Download or clone this repository onto your machine.
+2. Install the requirements (see Setup above).
+3. Start the Flask app:
+   ```bash
+   python lavender_dashboard.py
+   ```
+4. Open your browser to http://localhost:8000 to see the lavender dashboard. It refreshes every 60 seconds and also exposes a JSON feed at `http://localhost:8000/api/snapshot`.
+5. No API keys are required; Yahoo Finance data is pulled directly by the app.
 
 ## Usage
 
