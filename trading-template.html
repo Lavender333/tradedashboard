@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ES & ZB Daily Trading Template</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #1d2433;
+      --muted: #667085;
+      --line: #d8deea;
+      --accent: #2f6fed;
+      --accent-soft: #e7efff;
+      --good: #168a55;
+      --warn: #a86c00;
+      --bad: #b42318;
+      --soft-good: #e8f6ef;
+      --soft-warn: #fff4da;
+      --soft-bad: #fdecec;
+      --shadow: 0 8px 24px rgba(26, 36, 64, 0.06);
+    }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 760px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+    h1 {
+      font-size: 1.45rem;
+      margin: 0;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 4px;
+    }
+    .nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.86rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .button-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 560px) {
+      .summary {
+        grid-template-columns: 1fr;
+      }
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      min-height: 94px;
+    }
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .metric-value {
+      font-size: 1.45rem;
+      font-weight: 750;
+      margin-top: 6px;
+    }
+    .metric-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 4px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .sections {
+      display: grid;
+      gap: 14px;
+    }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-weight: 750;
+      font-size: 1rem;
+    }
+    .weight {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .subgrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 720px) {
+      .subgrid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .field-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+    }
+    .group-title {
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+    }
+    .checks {
+      display: grid;
+      gap: 8px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      accent-color: var(--accent);
+    }
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: #ffffff;
+      font-size: 0.9rem;
+    }
+    textarea {
+      min-height: 74px;
+      resize: vertical;
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 560px) {
+      .field-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+    .field span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .segmented label {
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #ffffff;
+    }
+    .score-panel {
+      position: sticky;
+      top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    @media (max-width: 980px) {
+      .score-panel {
+        position: static;
+      }
+    }
+    .score-row {
+      display: grid;
+      grid-template-columns: 1fr 82px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+    .score-row span {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .decision {
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-weight: 750;
+    }
+    .decision.good {
+      background: var(--soft-good);
+      color: var(--good);
+    }
+    .decision.warn {
+      background: var(--soft-warn);
+      color: var(--warn);
+    }
+    .decision.bad {
+      background: var(--soft-bad);
+      color: var(--bad);
+    }
+    .gate {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+    .gate-status {
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: 750;
+    }
+    .tiny {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .nav,
+      .button,
+      .summary {
+        display: none;
+      }
+      .layout {
+        display: block;
+      }
+      .score-panel,
+      .section {
+        box-shadow: none;
+        break-inside: avoid;
+        margin-bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div>
+        <h1>Professional ES & ZB Daily Trading Template</h1>
+        <div class="subtitle">v1.0 - Macro, trend, structure, order flow, volatility, and trade plan.</div>
+      </div>
+      <div class="nav">
+        <a class="button" href="index.html">Live Levels</a>
+        <button class="button" id="reset-btn" type="button">Reset</button>
+        <button class="button button-primary" type="button" onclick="window.print()">Print</button>
+      </div>
+    </div>
+
+    <section class="summary">
+      <div class="metric">
+        <div class="metric-label">Instrument</div>
+        <select id="instrument">
+          <option>ES</option>
+          <option>ZB</option>
+          <option>ES + ZB</option>
+        </select>
+        <div class="metric-note">Use one worksheet per trade idea.</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Total Score</div>
+        <div class="metric-value"><span id="total-score">0</span> / 100</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Decision</div>
+        <div class="metric-value" id="decision-short">No Trade</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Institutional Gate</div>
+        <div class="metric-value" id="gate-short">Fail</div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <div class="sections">
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">1. Macro Environment</div>
+            <div class="weight">20%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Economic Calendar</div>
+              <div class="checks">
+                <label><input type="checkbox"> High-impact news today: CPI, PPI, PCE, NFP, FOMC, GDP, Retail Sales</label>
+                <label><input type="checkbox"> Treasury auctions</label>
+                <label><input type="checkbox"> Fed speakers</label>
+                <label><input type="checkbox"> Market holiday or options expiration</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Macro Result</div>
+              <div class="segmented">
+                <label><input type="radio" name="macro-result"> Bullish</label>
+                <label><input type="radio" name="macro-result"> Neutral</label>
+                <label><input type="radio" name="macro-result"> Bearish</label>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Weight: 5%</span>
+                <input type="number" min="0" max="5" data-score="macro" placeholder="/5">
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Interest Rates</div>
+              <div class="field-row">
+                <label><input type="checkbox"> 2-Year Yield Up</label>
+                <label><input type="checkbox"> 2-Year Yield Down</label>
+                <label><input type="checkbox"> 10-Year Yield Up</label>
+                <label><input type="checkbox"> 10-Year Yield Down</label>
+                <label><input type="checkbox"> 30-Year Yield Up</label>
+                <label><input type="checkbox"> 30-Year Yield Down</label>
+              </div>
+              <p class="tiny">ES and ZB: falling yields are bullish; rising yields are bearish.</p>
+              <div class="field">
+                <span>Weight: 5%</span>
+                <input type="number" min="0" max="5" data-score="macro" placeholder="/5">
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Overnight News</div>
+              <textarea placeholder="Inflation, geopolitics, earnings, central banks, oil, dollar..."></textarea>
+              <div class="field" style="margin-top: 10px;">
+                <span>Weight: 10%</span>
+                <input type="number" min="0" max="10" data-score="macro" placeholder="/10">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">2. Higher Time Frame Trend</div>
+            <div class="weight">35%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Daily Trend</div>
+              <div class="field-row">
+                <label><input type="checkbox"> 20 MA Above</label>
+                <label><input type="checkbox"> 20 MA Below</label>
+                <label><input type="checkbox"> 50 MA Above</label>
+                <label><input type="checkbox"> 50 MA Below</label>
+                <label><input type="checkbox"> 72 MA Above</label>
+                <label><input type="checkbox"> 72 MA Below</label>
+                <label><input type="checkbox"> 100 MA Above</label>
+                <label><input type="checkbox"> 100 MA Below</label>
+                <label><input type="checkbox"> 200 MA Above</label>
+                <label><input type="checkbox"> 200 MA Below</label>
+              </div>
+              <p class="tiny">Above all five = +10; above four = +8; above three = +6; below three = 0.</p>
+              <div class="field">
+                <span>Daily score</span>
+                <input type="number" min="0" max="15" data-score="trend" placeholder="/15">
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Weekly Trend</div>
+              <div class="field-row">
+                <div class="field"><span>Weekly High</span><input type="text"></div>
+                <div class="field"><span>Weekly Low</span><input type="text"></div>
+              </div>
+              <div class="checks" style="margin-top: 8px;">
+                <label><input type="checkbox"> Above Weekly High</label>
+                <label><input type="checkbox"> Below Weekly Low</label>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Weight: 10%</span>
+                <input type="number" min="0" max="10" data-score="trend" placeholder="/10">
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Monthly Trend</div>
+              <div class="field-row">
+                <div class="field"><span>Monthly High</span><input type="text"></div>
+                <div class="field"><span>Monthly Low</span><input type="text"></div>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Weight: 10%</span>
+                <input type="number" min="0" max="10" data-score="trend" placeholder="/10">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">3. Trend Pro Confirmation</div>
+            <div class="weight">15%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Daily</div>
+              <div class="field-row">
+                <div class="field"><span>Bullish Level</span><input type="text"></div>
+                <div class="field"><span>Bearish Level</span><input type="text"></div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">240 Minute</div>
+              <div class="field-row">
+                <div class="field"><span>Bullish Level</span><input type="text"></div>
+                <div class="field"><span>Bearish Level</span><input type="text"></div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Result</div>
+              <div class="field"><span>Current Price</span><input type="text"></div>
+              <div class="segmented" style="margin-top: 10px;">
+                <label><input type="radio" name="trend-pro"> Bullish</label>
+                <label><input type="radio" name="trend-pro"> Neutral</label>
+                <label><input type="radio" name="trend-pro"> Bearish</label>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Score</span>
+                <input type="number" min="0" max="15" data-score="trendPro" placeholder="/15">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">4. Market Structure</div>
+            <div class="weight">10%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Opening Range</div>
+              <div class="field-row">
+                <div class="field"><span>High</span><input type="text"></div>
+                <div class="field"><span>Low</span><input type="text"></div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">VWAP</div>
+              <div class="segmented">
+                <label><input type="radio" name="vwap"> Above</label>
+                <label><input type="radio" name="vwap"> Below</label>
+                <label><input type="radio" name="vwap"> Mixed</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Reference Levels</div>
+              <div class="field-row">
+                <div class="field"><span>Previous Day High</span><input type="text"></div>
+                <div class="field"><span>Previous Day Low</span><input type="text"></div>
+                <div class="field"><span>ON High</span><input type="text"></div>
+                <div class="field"><span>ON Low</span><input type="text"></div>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Score</span>
+                <input type="number" min="0" max="10" data-score="structure" placeholder="/10">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">5. Order Flow</div>
+            <div class="weight">10%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Bookmap</div>
+              <div class="checks">
+                <label><input type="checkbox"> Large bids</label>
+                <label><input type="checkbox"> Large offers</label>
+                <label><input type="checkbox"> Absorption</label>
+                <label><input type="checkbox"> Icebergs</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Delta & Liquidity</div>
+              <div class="segmented">
+                <label><input type="radio" name="delta"> Positive</label>
+                <label><input type="radio" name="delta"> Negative</label>
+                <label><input type="radio" name="delta"> Mixed</label>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Liquidity Shift</span>
+                <input type="text">
+              </div>
+              <div class="segmented" style="margin-top: 10px;">
+                <label><input type="radio" name="order-flow"> Bullish</label>
+                <label><input type="radio" name="order-flow"> Neutral</label>
+                <label><input type="radio" name="order-flow"> Bearish</label>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Score</span>
+                <input type="number" min="0" max="10" data-score="orderFlow" placeholder="/10">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">6. Volatility</div>
+            <div class="weight">5%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="field-row">
+                <div class="field"><span>ATR</span><input type="text"></div>
+                <div class="field"><span>VIX (ES)</span><input type="text"></div>
+                <div class="field"><span>MOVE Index (ZB)</span><input type="text"></div>
+                <div class="field"><span>Average Daily Range</span><input type="text"></div>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Score</span>
+                <input type="number" min="0" max="5" data-score="volatility" placeholder="/5">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">7. Professional Trade Plan</div>
+            <div class="weight">5%</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Today's Bias</div>
+              <div class="checks">
+                <label><input type="radio" name="today-bias"> Strong Bull</label>
+                <label><input type="radio" name="today-bias"> Bull</label>
+                <label><input type="radio" name="today-bias"> Neutral</label>
+                <label><input type="radio" name="today-bias"> Bear</label>
+                <label><input type="radio" name="today-bias"> Strong Bear</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Direction</div>
+              <div class="checks">
+                <label><input type="radio" name="direction"> Long Only</label>
+                <label><input type="radio" name="direction"> Short Only</label>
+                <label><input type="radio" name="direction"> Both</label>
+                <label><input type="radio" name="direction"> No Trade</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Entry Type</div>
+              <div class="checks">
+                <label><input type="checkbox"> Pullback</label>
+                <label><input type="checkbox"> Breakout</label>
+                <label><input type="checkbox"> Reversal</label>
+                <label><input type="checkbox"> Fade</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Trade Levels</div>
+              <div class="field-row">
+                <div class="field"><span>Entry</span><input type="text"></div>
+                <div class="field"><span>Stop</span><input type="text"></div>
+                <div class="field"><span>Target 1</span><input type="text"></div>
+                <div class="field"><span>Target 2</span><input type="text"></div>
+              </div>
+              <div class="field" style="margin-top: 10px;">
+                <span>Score</span>
+                <input type="number" min="0" max="5" data-score="tradePlan" placeholder="/5">
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="score-panel">
+        <div class="section-title">Confidence Score</div>
+        <p class="tiny">Enter each category score after completing the checklist.</p>
+        <div class="score-row"><span>Macro /20</span><strong id="macro-score">0</strong></div>
+        <div class="score-row"><span>Trend /35</span><strong id="trend-score">0</strong></div>
+        <div class="score-row"><span>Trend Pro /15</span><strong id="trendPro-score">0</strong></div>
+        <div class="score-row"><span>Structure /10</span><strong id="structure-score">0</strong></div>
+        <div class="score-row"><span>Order Flow /10</span><strong id="orderFlow-score">0</strong></div>
+        <div class="score-row"><span>Volatility /5</span><strong id="volatility-score">0</strong></div>
+        <div class="score-row"><span>Trade Plan /5</span><strong id="tradePlan-score">0</strong></div>
+        <div class="decision bad" id="decision-box">Below 70: No trade.</div>
+
+        <div class="gate">
+          <div class="section-title">Institutional Alignment Gate</div>
+          <div class="checks">
+            <label><input type="checkbox" class="gate-check"> Macro bias agrees with the trade</label>
+            <label><input type="checkbox" class="gate-check"> Higher-timeframe trend agrees</label>
+            <label><input type="checkbox" class="gate-check"> Trend Pro agrees</label>
+            <label><input type="checkbox" class="gate-check"> Order flow confirms</label>
+            <label><input type="checkbox" class="gate-check"> Risk-to-reward is at least 2:1</label>
+          </div>
+          <div class="gate-status bad" id="gate-box">Fail: default action is No Trade.</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
+    const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
+
+    function clampScore(input) {
+      const max = Number(input.max || 100);
+      const min = Number(input.min || 0);
+      if (input.value === "") return 0;
+      const next = Math.min(max, Math.max(min, Number(input.value || 0)));
+      input.value = next;
+      return next;
+    }
+
+    function sumGroup(name) {
+      return Array.from(document.querySelectorAll(`[data-score="${name}"]`))
+        .reduce((sum, input) => sum + clampScore(input), 0);
+    }
+
+    function decisionFor(total) {
+      if (total >= 90) return { text: "90-100: A+ setup - full-size position.", short: "A+ Setup", kind: "good" };
+      if (total >= 80) return { text: "80-89: A setup - normal position size.", short: "A Setup", kind: "good" };
+      if (total >= 70) return { text: "70-79: B setup - reduce size or wait for stronger confirmation.", short: "B Setup", kind: "warn" };
+      return { text: "Below 70: No trade.", short: "No Trade", kind: "bad" };
+    }
+
+    function updateScores() {
+      let total = 0;
+      scoreGroups.forEach((group) => {
+        const raw = sumGroup(group);
+        const capped = Math.min(maxByGroup[group], raw);
+        total += capped;
+        document.getElementById(`${group}-score`).textContent = capped;
+      });
+      document.getElementById("total-score").textContent = total;
+
+      const decision = decisionFor(total);
+      const box = document.getElementById("decision-box");
+      box.textContent = decision.text;
+      box.className = "decision " + decision.kind;
+      document.getElementById("decision-short").textContent = decision.short;
+
+      updateGate();
+      saveState();
+    }
+
+    function updateGate() {
+      const checks = Array.from(document.querySelectorAll(".gate-check"));
+      const passed = checks.every((check) => check.checked);
+      const box = document.getElementById("gate-box");
+      box.textContent = passed ? "Pass: trade is allowed if score rules also agree." : "Fail: default action is No Trade.";
+      box.className = "gate-status " + (passed ? "good" : "bad");
+      document.getElementById("gate-short").textContent = passed ? "Pass" : "Fail";
+      if (!passed) {
+        document.getElementById("decision-short").textContent = "No Trade";
+      }
+    }
+
+    function formControls() {
+      return Array.from(document.querySelectorAll("input, textarea, select"));
+    }
+
+    function saveState() {
+      const state = formControls().map((control) => ({
+        type: control.type,
+        name: control.name,
+        value: control.value,
+        checked: control.checked
+      }));
+      localStorage.setItem("trading-template-v1", JSON.stringify(state));
+    }
+
+    function restoreState() {
+      const raw = localStorage.getItem("trading-template-v1");
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      formControls().forEach((control, index) => {
+        const saved = state[index];
+        if (!saved) return;
+        if (control.type === "checkbox" || control.type === "radio") {
+          control.checked = saved.checked;
+        } else {
+          control.value = saved.value;
+        }
+      });
+    }
+
+    formControls().forEach((control) => {
+      control.addEventListener("input", updateScores);
+      control.addEventListener("change", updateScores);
+    });
+
+    document.getElementById("reset-btn").addEventListener("click", () => {
+      localStorage.removeItem("trading-template-v1");
+      formControls().forEach((control) => {
+        if (control.type === "checkbox" || control.type === "radio") {
+          control.checked = false;
+        } else if (control.tagName === "SELECT") {
+          control.selectedIndex = 0;
+        } else {
+          control.value = "";
+        }
+      });
+      updateScores();
+    });
+
+    restoreState();
+    updateScores();
+  </script>
+</body>
+</html>

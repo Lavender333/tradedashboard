@@ -47,6 +47,9 @@
         align-items: flex-start;
         flex-direction: column;
       }
+      .nav-actions {
+        justify-content: flex-start;
+      }
     }
     .title {
       font-size: 1.4rem;
@@ -168,6 +171,23 @@
       font-size: 0.78rem;
       white-space: nowrap;
     }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .nav-link {
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: #ffffff;
+      color: #5b4cbf;
+      font-size: 0.78rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
     .pill-dot {
       width: 6px;
       height: 6px;
@@ -200,9 +220,12 @@
         <div class="title">MES Live Levels</div>
         <div class="subtitle">Lavender mode · static GitHub Pages view</div>
       </div>
-      <div class="pill" id="data-status-pill">
-        <div class="pill-dot"></div>
-        <span id="data-status-text">Loading snapshot...</span>
+      <div class="nav-actions">
+        <a class="nav-link" href="trading-template.html">ES/ZB Template</a>
+        <div class="pill" id="data-status-pill">
+          <div class="pill-dot"></div>
+          <span id="data-status-text">Loading snapshot...</span>
+        </div>
       </div>
     </div>
 

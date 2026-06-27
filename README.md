@@ -55,6 +55,12 @@ The public static dashboard is available at:
 https://lavender333.github.io/tradedashboard/
 ```
 
+The professional ES/ZB daily trading template is available at:
+
+```text
+https://lavender333.github.io/tradedashboard/trading-template.html
+```
+
 GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
 
 For trading-grade data:
