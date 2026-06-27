@@ -102,6 +102,48 @@
       box-shadow: var(--shadow);
       min-height: 94px;
     }
+    .auto-context {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .auto-context {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 560px) {
+      .auto-context {
+        grid-template-columns: 1fr;
+      }
+    }
+    .auto-item {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      min-height: 82px;
+    }
+    .auto-label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .auto-value {
+      font-size: 1rem;
+      font-weight: 750;
+      margin-top: 5px;
+      overflow-wrap: anywhere;
+    }
+    .auto-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
     .metric-label {
       color: var(--muted);
       font-size: 0.78rem;
@@ -336,6 +378,7 @@
       </div>
       <div class="nav">
         <a class="button" href="index.html">Live Levels</a>
+        <button class="button" id="refresh-auto-btn" type="button">Refresh Auto Data</button>
         <button class="button" id="reset-btn" type="button">Reset</button>
         <button class="button button-primary" type="button" onclick="window.print()">Print</button>
       </div>
@@ -362,6 +405,29 @@
       <div class="metric">
         <div class="metric-label">Institutional Gate</div>
         <div class="metric-value" id="gate-short">Fail</div>
+      </div>
+    </section>
+
+    <section class="auto-context" id="auto-context">
+      <div class="auto-item">
+        <div class="auto-label">Auto Data</div>
+        <div class="auto-value" id="auto-status">Loading...</div>
+        <div class="auto-note" id="auto-generated">-</div>
+      </div>
+      <div class="auto-item">
+        <div class="auto-label">ES Context</div>
+        <div class="auto-value" id="auto-es">-</div>
+        <div class="auto-note" id="auto-es-note">-</div>
+      </div>
+      <div class="auto-item">
+        <div class="auto-label">ZB Context</div>
+        <div class="auto-value" id="auto-zb">-</div>
+        <div class="auto-note" id="auto-zb-note">-</div>
+      </div>
+      <div class="auto-item">
+        <div class="auto-label">Rates / Volatility</div>
+        <div class="auto-value" id="auto-rates">-</div>
+        <div class="auto-note" id="auto-vol">-</div>
       </div>
     </section>
 
@@ -397,17 +463,17 @@
             <div class="field-group">
               <div class="group-title">Interest Rates</div>
               <div class="field-row">
-                <label><input type="checkbox"> 2-Year Yield Up</label>
-                <label><input type="checkbox"> 2-Year Yield Down</label>
-                <label><input type="checkbox"> 10-Year Yield Up</label>
-                <label><input type="checkbox"> 10-Year Yield Down</label>
-                <label><input type="checkbox"> 30-Year Yield Up</label>
-                <label><input type="checkbox"> 30-Year Yield Down</label>
+                <label><input type="checkbox" data-auto="yield-2y-up"> 2-Year Yield Up</label>
+                <label><input type="checkbox" data-auto="yield-2y-down"> 2-Year Yield Down</label>
+                <label><input type="checkbox" data-auto="yield-10y-up"> 10-Year Yield Up</label>
+                <label><input type="checkbox" data-auto="yield-10y-down"> 10-Year Yield Down</label>
+                <label><input type="checkbox" data-auto="yield-30y-up"> 30-Year Yield Up</label>
+                <label><input type="checkbox" data-auto="yield-30y-down"> 30-Year Yield Down</label>
               </div>
               <p class="tiny">ES and ZB: falling yields are bullish; rising yields are bearish.</p>
               <div class="field">
                 <span>Weight: 5%</span>
-                <input type="number" min="0" max="5" data-score="macro" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="macro" data-auto="macro-rates-score" placeholder="/5">
               </div>
             </div>
             <div class="field-group">
@@ -430,32 +496,32 @@
             <div class="field-group">
               <div class="group-title">Daily Trend</div>
               <div class="field-row">
-                <label><input type="checkbox"> 20 MA Above</label>
-                <label><input type="checkbox"> 20 MA Below</label>
-                <label><input type="checkbox"> 50 MA Above</label>
-                <label><input type="checkbox"> 50 MA Below</label>
-                <label><input type="checkbox"> 72 MA Above</label>
-                <label><input type="checkbox"> 72 MA Below</label>
-                <label><input type="checkbox"> 100 MA Above</label>
-                <label><input type="checkbox"> 100 MA Below</label>
-                <label><input type="checkbox"> 200 MA Above</label>
-                <label><input type="checkbox"> 200 MA Below</label>
+                <label><input type="checkbox" data-auto="ma20-above"> 20 MA Above</label>
+                <label><input type="checkbox" data-auto="ma20-below"> 20 MA Below</label>
+                <label><input type="checkbox" data-auto="ma50-above"> 50 MA Above</label>
+                <label><input type="checkbox" data-auto="ma50-below"> 50 MA Below</label>
+                <label><input type="checkbox" data-auto="ma72-above"> 72 MA Above</label>
+                <label><input type="checkbox" data-auto="ma72-below"> 72 MA Below</label>
+                <label><input type="checkbox" data-auto="ma100-above"> 100 MA Above</label>
+                <label><input type="checkbox" data-auto="ma100-below"> 100 MA Below</label>
+                <label><input type="checkbox" data-auto="ma200-above"> 200 MA Above</label>
+                <label><input type="checkbox" data-auto="ma200-below"> 200 MA Below</label>
               </div>
               <p class="tiny">Above all five = +10; above four = +8; above three = +6; below three = 0.</p>
               <div class="field">
                 <span>Daily score</span>
-                <input type="number" min="0" max="15" data-score="trend" placeholder="/15">
+                <input type="number" min="0" max="15" data-score="trend" data-auto="daily-trend-score" placeholder="/15">
               </div>
             </div>
             <div class="field-group">
               <div class="group-title">Weekly Trend</div>
               <div class="field-row">
-                <div class="field"><span>Weekly High</span><input type="text"></div>
-                <div class="field"><span>Weekly Low</span><input type="text"></div>
+                <div class="field"><span>Weekly High</span><input type="text" data-auto="weekly-high"></div>
+                <div class="field"><span>Weekly Low</span><input type="text" data-auto="weekly-low"></div>
               </div>
               <div class="checks" style="margin-top: 8px;">
-                <label><input type="checkbox"> Above Weekly High</label>
-                <label><input type="checkbox"> Below Weekly Low</label>
+                <label><input type="checkbox" data-auto="above-weekly-high"> Above Weekly High</label>
+                <label><input type="checkbox" data-auto="below-weekly-low"> Below Weekly Low</label>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
@@ -465,8 +531,8 @@
             <div class="field-group">
               <div class="group-title">Monthly Trend</div>
               <div class="field-row">
-                <div class="field"><span>Monthly High</span><input type="text"></div>
-                <div class="field"><span>Monthly Low</span><input type="text"></div>
+                <div class="field"><span>Monthly High</span><input type="text" data-auto="monthly-high"></div>
+                <div class="field"><span>Monthly Low</span><input type="text" data-auto="monthly-low"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
@@ -498,7 +564,7 @@
             </div>
             <div class="field-group">
               <div class="group-title">Result</div>
-              <div class="field"><span>Current Price</span><input type="text"></div>
+              <div class="field"><span>Current Price</span><input type="text" data-auto="current-price"></div>
               <div class="segmented" style="margin-top: 10px;">
                 <label><input type="radio" name="trend-pro"> Bullish</label>
                 <label><input type="radio" name="trend-pro"> Neutral</label>
@@ -521,8 +587,8 @@
             <div class="field-group">
               <div class="group-title">Opening Range</div>
               <div class="field-row">
-                <div class="field"><span>High</span><input type="text"></div>
-                <div class="field"><span>Low</span><input type="text"></div>
+                <div class="field"><span>High</span><input type="text" data-auto="opening-range-high"></div>
+                <div class="field"><span>Low</span><input type="text" data-auto="opening-range-low"></div>
               </div>
             </div>
             <div class="field-group">
@@ -536,10 +602,10 @@
             <div class="field-group">
               <div class="group-title">Reference Levels</div>
               <div class="field-row">
-                <div class="field"><span>Previous Day High</span><input type="text"></div>
-                <div class="field"><span>Previous Day Low</span><input type="text"></div>
-                <div class="field"><span>ON High</span><input type="text"></div>
-                <div class="field"><span>ON Low</span><input type="text"></div>
+                <div class="field"><span>Previous Day High</span><input type="text" data-auto="previous-day-high"></div>
+                <div class="field"><span>Previous Day Low</span><input type="text" data-auto="previous-day-low"></div>
+                <div class="field"><span>ON High</span><input type="text" data-auto="overnight-high"></div>
+                <div class="field"><span>ON Low</span><input type="text" data-auto="overnight-low"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
@@ -596,10 +662,10 @@
           <div class="subgrid">
             <div class="field-group">
               <div class="field-row">
-                <div class="field"><span>ATR</span><input type="text"></div>
-                <div class="field"><span>VIX (ES)</span><input type="text"></div>
-                <div class="field"><span>MOVE Index (ZB)</span><input type="text"></div>
-                <div class="field"><span>Average Daily Range</span><input type="text"></div>
+                <div class="field"><span>ATR</span><input type="text" data-auto="atr"></div>
+                <div class="field"><span>VIX (ES)</span><input type="text" data-auto="vix"></div>
+                <div class="field"><span>MOVE Index (ZB)</span><input type="text" data-auto="move"></div>
+                <div class="field"><span>Average Daily Range</span><input type="text" data-auto="average-daily-range"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
@@ -744,6 +810,119 @@
       }
     }
 
+    function autoControl(name) {
+      return document.querySelector(`[data-auto="${name}"]`);
+    }
+
+    function setAutoValue(name, value) {
+      const control = autoControl(name);
+      if (!control) return;
+      control.value = value === null || value === undefined ? "" : value;
+    }
+
+    function setAutoChecked(name, checked) {
+      const control = autoControl(name);
+      if (!control) return;
+      control.checked = Boolean(checked);
+    }
+
+    function fmt(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+      return Number(value).toFixed(2);
+    }
+
+    function selectedInstrumentKey() {
+      const value = document.getElementById("instrument").value;
+      return value === "ZB" ? "ZB" : "ES";
+    }
+
+    function applyMovingAverages(context) {
+      ["ma20", "ma50", "ma72", "ma100", "ma200"].forEach((key) => {
+        const aboveName = key.replace("ma", "ma") + "-above";
+        const belowName = key.replace("ma", "ma") + "-below";
+        const average = context.moving_averages[key];
+        const above = average !== null && average !== undefined && context.last > average;
+        setAutoChecked(aboveName, above);
+        setAutoChecked(belowName, !above && average !== null && average !== undefined);
+      });
+    }
+
+    function applyYields(snapshot) {
+      const map = {
+        "2y": "yield-2y",
+        "10y": "yield-10y",
+        "30y": "yield-30y"
+      };
+      Object.entries(map).forEach(([key, prefix]) => {
+        const direction = snapshot.yields?.[key]?.direction;
+        setAutoChecked(`${prefix}-up`, direction === "Up");
+        setAutoChecked(`${prefix}-down`, direction === "Down");
+      });
+      setAutoValue("macro-rates-score", snapshot.rate_context?.score ?? "");
+    }
+
+    function applyTemplateSnapshot(snapshot) {
+      if (!snapshot || snapshot.error) {
+        document.getElementById("auto-status").textContent = "Unavailable";
+        document.getElementById("auto-generated").textContent = snapshot?.error || "No automation snapshot found.";
+        return;
+      }
+
+      const key = selectedInstrumentKey();
+      const context = snapshot.instruments[key];
+      const vix = snapshot.volatility?.vix;
+      const move = snapshot.volatility?.move;
+      document.getElementById("auto-status").textContent = snapshot.provider || "Automated";
+      document.getElementById("auto-generated").textContent = "Generated " + snapshot.generated_at;
+      document.getElementById("auto-es").textContent =
+        `ES ${fmt(snapshot.instruments.ES.last)} · ${snapshot.instruments.ES.trend.result}`;
+      document.getElementById("auto-es-note").textContent =
+        `20/50/72/100/200 trend score ${snapshot.instruments.ES.trend.score}/10`;
+      document.getElementById("auto-zb").textContent =
+        `ZB ${fmt(snapshot.instruments.ZB.last)} · ${snapshot.instruments.ZB.trend.result}`;
+      document.getElementById("auto-zb-note").textContent =
+        `20/50/72/100/200 trend score ${snapshot.instruments.ZB.trend.score}/10`;
+      document.getElementById("auto-rates").textContent =
+        `${snapshot.rate_context.result} rates · ${snapshot.rate_context.score}/5`;
+      document.getElementById("auto-vol").textContent =
+        `VIX ${fmt(vix)} · MOVE ${move === null || move === undefined ? "-" : fmt(move)}`;
+
+      applyYields(snapshot);
+      applyMovingAverages(context);
+      setAutoValue("daily-trend-score", context.trend.score);
+      setAutoValue("weekly-high", fmt(context.weekly_high));
+      setAutoValue("weekly-low", fmt(context.weekly_low));
+      setAutoChecked("above-weekly-high", context.last > context.weekly_high);
+      setAutoChecked("below-weekly-low", context.last < context.weekly_low);
+      setAutoValue("monthly-high", fmt(context.monthly_high));
+      setAutoValue("monthly-low", fmt(context.monthly_low));
+      setAutoValue("current-price", fmt(context.last));
+      setAutoValue("opening-range-high", fmt(context.opening_range_high));
+      setAutoValue("opening-range-low", fmt(context.opening_range_low));
+      setAutoValue("previous-day-high", fmt(context.previous_day_high));
+      setAutoValue("previous-day-low", fmt(context.previous_day_low));
+      setAutoValue("overnight-high", fmt(context.overnight_high));
+      setAutoValue("overnight-low", fmt(context.overnight_low));
+      setAutoValue("atr", `${fmt(context.atr_15m)} 15m / ${fmt(context.atr_daily)} daily`);
+      setAutoValue("vix", key === "ES" ? fmt(vix) : "");
+      setAutoValue("move", key === "ZB" && move !== null && move !== undefined ? fmt(move) : "");
+      setAutoValue("average-daily-range", fmt(context.atr_daily));
+
+      updateScores();
+    }
+
+    async function loadAutomation() {
+      try {
+        const response = await fetch("data/template-snapshot.json?v=" + Date.now(), { cache: "no-store" });
+        const snapshot = await response.json();
+        window.templateSnapshot = snapshot;
+        applyTemplateSnapshot(snapshot);
+      } catch (error) {
+        document.getElementById("auto-status").textContent = "Unavailable";
+        document.getElementById("auto-generated").textContent = error.message;
+      }
+    }
+
     function formControls() {
       return Array.from(document.querySelectorAll("input, textarea, select"));
     }
@@ -790,10 +969,17 @@
         }
       });
       updateScores();
+      if (window.templateSnapshot) applyTemplateSnapshot(window.templateSnapshot);
+    });
+
+    document.getElementById("refresh-auto-btn").addEventListener("click", loadAutomation);
+    document.getElementById("instrument").addEventListener("change", () => {
+      if (window.templateSnapshot) applyTemplateSnapshot(window.templateSnapshot);
     });
 
     restoreState();
     updateScores();
+    loadAutomation();
   </script>
 </body>
 </html>

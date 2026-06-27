@@ -43,11 +43,14 @@ jobs:
           DATABENTO_DATASET: GLBX.MDP3
         run: python scripts/build_pages_snapshot.py
 
+      - name: Build template automation snapshot
+        run: python scripts/build_template_snapshot.py
+
       - name: Prepare static site
         run: |
           mkdir -p dist/data
           cp index.html trading-template.html .nojekyll dist/
-          cp data/snapshot.json dist/data/snapshot.json
+          cp data/snapshot.json data/template-snapshot.json dist/data/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

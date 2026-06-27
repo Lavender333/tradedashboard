@@ -1,0 +1,99 @@
+{
+  "generated_at": "2026-06-27 16:09 UTC",
+  "instruments": {
+    "ES": {
+      "atr_15m": 19.14,
+      "atr_daily": 125.83,
+      "last": 7401.75,
+      "last_time": "2026-06-26 20:45 UTC",
+      "monthly_high": 7632.25,
+      "monthly_low": 7232.25,
+      "moving_averages": {
+        "ma100": 7087.31,
+        "ma20": 7478.45,
+        "ma200": 6951.84,
+        "ma50": 7389.25,
+        "ma72": 7174.65
+      },
+      "name": "ES",
+      "opening_range_high": 7536.5,
+      "opening_range_low": 7530.0,
+      "overnight_high": 7599.25,
+      "overnight_low": 7357.25,
+      "previous_day_high": 7496.0,
+      "previous_day_low": 7390.5,
+      "symbol": "ES=F",
+      "trend": {
+        "above_count": 4,
+        "result": "Bullish",
+        "score": 8
+      },
+      "weekly_high": 7599.25,
+      "weekly_low": 7357.25
+    },
+    "ZB": {
+      "atr_15m": 0.06,
+      "atr_daily": 0.8,
+      "last": 114.16,
+      "last_time": "2026-06-26 20:45 UTC",
+      "monthly_high": 114.62,
+      "monthly_low": 111.69,
+      "moving_averages": {
+        "ma100": 114.15,
+        "ma20": 113.02,
+        "ma200": 115.44,
+        "ma50": 112.83,
+        "ma72": 113.15
+      },
+      "name": "ZB",
+      "opening_range_high": 113.03,
+      "opening_range_low": 112.78,
+      "overnight_high": 114.62,
+      "overnight_low": 112.5,
+      "previous_day_high": 114.62,
+      "previous_day_low": 113.94,
+      "symbol": "ZB=F",
+      "trend": {
+        "above_count": 4,
+        "result": "Bullish",
+        "score": 8
+      },
+      "weekly_high": 114.62,
+      "weekly_low": 112.5
+    }
+  },
+  "provider": "Yahoo Finance delayed",
+  "rate_context": {
+    "result": "Neutral",
+    "score": 3
+  },
+  "suggested_scores": {
+    "es_daily_trend": 8,
+    "macro_rates": 3,
+    "zb_daily_trend": 8
+  },
+  "volatility": {
+    "move": null,
+    "vix": 18.41
+  },
+  "yields": {
+    "10y": {
+      "direction": "Flat",
+      "latest": 4.37,
+      "previous": 4.37,
+      "symbol": "^TNX"
+    },
+    "2y": {
+      "direction": "Flat",
+      "latest": 3.66,
+      "previous": 3.66,
+      "symbol": "^IRX"
+    },
+    "30y": {
+      "direction": "Flat",
+      "latest": 4.86,
+      "previous": 4.86,
+      "symbol": "^TYX"
+    }
+  }
+}

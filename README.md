@@ -61,6 +61,18 @@ The professional ES/ZB daily trading template is available at:
 https://lavender333.github.io/tradedashboard/trading-template.html
 ```
 
+The ES/ZB template auto-fills the measurable market context from delayed public data:
+
+- ES and ZB current price context
+- 20/50/72/100/200 daily moving-average checks
+- Daily trend score suggestion
+- Weekly and monthly high/low
+- Previous day high/low
+- Opening range and overnight high/low
+- ATR, VIX, and Treasury-yield direction
+
+Manual confirmation is still required for economic news, Trend Pro levels, VWAP judgment, Bookmap/order-flow reads, trade entries, stops, targets, and the Institutional Alignment Gate.
+
 GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
 
 For trading-grade data:
