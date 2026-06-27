@@ -4,10 +4,15 @@
     "ES": {
       "atr_15m": 19.14,
       "atr_daily": 125.83,
+      "higher_timeframe_trend": "Bearish",
       "last": 7401.75,
       "last_time": "2026-06-26 20:45 UTC",
       "monthly_high": 7632.25,
       "monthly_low": 7232.25,
+      "monthly_trend": {
+        "result": "Bearish",
+        "score": 3
+      },
       "moving_averages": {
         "ma100": 7087.31,
         "ma20": 7478.45,
@@ -29,15 +34,24 @@
         "score": 8
       },
       "weekly_high": 7599.25,
-      "weekly_low": 7357.25
+      "weekly_low": 7357.25,
+      "weekly_trend": {
+        "result": "Bearish",
+        "score": 3
+      }
     },
     "ZB": {
       "atr_15m": 0.06,
       "atr_daily": 0.8,
+      "higher_timeframe_trend": "Bullish",
       "last": 114.16,
       "last_time": "2026-06-26 20:45 UTC",
       "monthly_high": 114.62,
       "monthly_low": 111.69,
+      "monthly_trend": {
+        "result": "Bullish",
+        "score": 6
+      },
       "moving_averages": {
         "ma100": 114.15,
         "ma20": 113.02,
@@ -59,7 +73,11 @@
         "score": 8
       },
       "weekly_high": 114.62,
-      "weekly_low": 112.5
+      "weekly_low": 112.5,
+      "weekly_trend": {
+        "result": "Bullish",
+        "score": 6
+      }
     }
   },
   "provider": "Yahoo Finance delayed",

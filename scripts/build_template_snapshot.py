@@ -1,7 +1,6 @@
 """Build automated market context for the ES/ZB trading template."""
 
 import json
-import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
@@ -100,6 +99,56 @@ def trend_score(close: float, averages: Dict[str, float]) -> Dict:
     return {"above_count": above_count, "score": score, "result": result}
 
 
+def period_range(rows: List[Dict], key_func, offset: int = 1) -> Dict:
+    periods = []
+    current_key = None
+    bucket = []
+    for row in rows:
+        key = key_func(row["time"])
+        if current_key is None:
+            current_key = key
+        if key != current_key:
+            periods.append(bucket)
+            bucket = []
+            current_key = key
+        bucket.append(row)
+    if bucket:
+        periods.append(bucket)
+    if len(periods) <= offset:
+        selected = periods[0]
+    else:
+        selected = periods[-1 - offset]
+    return {
+        "high": max(row["high"] for row in selected),
+        "low": min(row["low"] for row in selected),
+    }
+
+
+def range_break_result(last: float, high: float, low: float) -> Dict:
+    if last > high:
+        result = "Bullish"
+        score = 10
+    elif last < low:
+        result = "Bearish"
+        score = 0
+    else:
+        midpoint = (high + low) / 2
+        result = "Bullish" if last >= midpoint else "Bearish"
+        score = 6 if result == "Bullish" else 3
+    return {"result": result, "score": score}
+
+
+def combined_htf_result(daily_result: str, weekly_result: str, monthly_result: str) -> str:
+    votes = [daily_result, weekly_result, monthly_result]
+    bullish = votes.count("Bullish")
+    bearish = votes.count("Bearish")
+    if bullish >= 2:
+        return "Bullish"
+    if bearish >= 2:
+        return "Bearish"
+    return "Neutral"
+
+
 def instrument_snapshot(name: str, symbol: str) -> Dict:
     daily = candles(symbol, "1y", "1d")
     intraday = candles(symbol, "5d", "15m")
@@ -108,8 +157,11 @@ def instrument_snapshot(name: str, symbol: str) -> Dict:
     averages = {f"ma{period}": sma(closes, period) for period in [20, 50, 72, 100, 200]}
     trend = trend_score(current, averages)
     prev_day = daily[-2] if len(daily) > 1 else daily[-1]
-    week_rows = daily[-5:]
-    month_rows = daily[-22:]
+    weekly_range = period_range(daily, lambda value: value.isocalendar()[:2])
+    monthly_range = period_range(daily, lambda value: (value.year, value.month))
+    weekly_trend = range_break_result(current, weekly_range["high"], weekly_range["low"])
+    monthly_trend = range_break_result(current, monthly_range["high"], monthly_range["low"])
+    htf_result = combined_htf_result(trend["result"], weekly_trend["result"], monthly_trend["result"])
     intraday_atr = atr(intraday)
     daily_atr = atr(daily)
 
@@ -120,10 +172,13 @@ def instrument_snapshot(name: str, symbol: str) -> Dict:
         "last_time": intraday[-1]["time"].strftime("%Y-%m-%d %H:%M UTC"),
         "moving_averages": {key: round_price(value) for key, value in averages.items()},
         "trend": trend,
-        "weekly_high": round_price(max(row["high"] for row in week_rows)),
-        "weekly_low": round_price(min(row["low"] for row in week_rows)),
-        "monthly_high": round_price(max(row["high"] for row in month_rows)),
-        "monthly_low": round_price(min(row["low"] for row in month_rows)),
+        "weekly_high": round_price(weekly_range["high"]),
+        "weekly_low": round_price(weekly_range["low"]),
+        "weekly_trend": weekly_trend,
+        "monthly_high": round_price(monthly_range["high"]),
+        "monthly_low": round_price(monthly_range["low"]),
+        "monthly_trend": monthly_trend,
+        "higher_timeframe_trend": htf_result,
         "previous_day_high": round_price(prev_day["high"]),
         "previous_day_low": round_price(prev_day["low"]),
         "opening_range_high": round_price(max(row["high"] for row in intraday[:2])),

@@ -144,6 +144,17 @@
       margin-top: 4px;
       line-height: 1.35;
     }
+    .auto-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-left: 6px;
+    }
     .metric-label {
       color: var(--muted);
       font-size: 0.78rem;
@@ -429,6 +440,11 @@
         <div class="auto-value" id="auto-rates">-</div>
         <div class="auto-note" id="auto-vol">-</div>
       </div>
+      <div class="auto-item">
+        <div class="auto-label">HTF / Monthly Decision</div>
+        <div class="auto-value" id="auto-htf">-</div>
+        <div class="auto-note" id="auto-monthly">-</div>
+      </div>
     </section>
 
     <div class="layout">
@@ -525,18 +541,18 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
-                <input type="number" min="0" max="10" data-score="trend" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="trend" data-auto="weekly-trend-score" placeholder="/10">
               </div>
             </div>
             <div class="field-group">
-              <div class="group-title">Monthly Trend</div>
+              <div class="group-title">Monthly Trend <span class="auto-badge" id="monthly-trend-badge">Auto: -</span></div>
               <div class="field-row">
                 <div class="field"><span>Monthly High</span><input type="text" data-auto="monthly-high"></div>
                 <div class="field"><span>Monthly Low</span><input type="text" data-auto="monthly-low"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
-                <input type="number" min="0" max="10" data-score="trend" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="trend" data-auto="monthly-trend-score" placeholder="/10">
               </div>
             </div>
           </div>
@@ -741,11 +757,11 @@
         <div class="gate">
           <div class="section-title">Institutional Alignment Gate</div>
           <div class="checks">
-            <label><input type="checkbox" class="gate-check"> Macro bias agrees with the trade</label>
-            <label><input type="checkbox" class="gate-check"> Higher-timeframe trend agrees</label>
-            <label><input type="checkbox" class="gate-check"> Trend Pro agrees</label>
-            <label><input type="checkbox" class="gate-check"> Order flow confirms</label>
-            <label><input type="checkbox" class="gate-check"> Risk-to-reward is at least 2:1</label>
+            <label><input type="checkbox" class="gate-check" data-gate="macro"> Macro bias agrees with the trade</label>
+            <label><input type="checkbox" class="gate-check" data-gate="htf"> Higher-timeframe trend agrees</label>
+            <label><input type="checkbox" class="gate-check" data-gate="trend-pro"> Trend Pro agrees</label>
+            <label><input type="checkbox" class="gate-check" data-gate="order-flow"> Order flow confirms</label>
+            <label><input type="checkbox" class="gate-check" data-gate="risk-reward"> Risk-to-reward is at least 2:1</label>
           </div>
           <div class="gate-status bad" id="gate-box">Fail: default action is No Trade.</div>
         </div>
@@ -799,6 +815,7 @@
     }
 
     function updateGate() {
+      updateAutomatedGateChecks();
       const checks = Array.from(document.querySelectorAll(".gate-check"));
       const passed = checks.every((check) => check.checked);
       const box = document.getElementById("gate-box");
@@ -808,6 +825,69 @@
       if (!passed) {
         document.getElementById("decision-short").textContent = "No Trade";
       }
+    }
+
+    function selectedDirection() {
+      const checked = document.querySelector('input[name="direction"]:checked');
+      return checked ? checked.parentElement.textContent.trim() : "";
+    }
+
+    function selectedTrendPro() {
+      const checked = document.querySelector('input[name="trend-pro"]:checked');
+      return checked ? checked.parentElement.textContent.trim() : "";
+    }
+
+    function directionAgrees(direction, result) {
+      if (!direction || !result || direction === "Both") return false;
+      if (direction === "No Trade") return false;
+      if (direction === "Long Only") return result === "Bullish";
+      if (direction === "Short Only") return result === "Bearish";
+      return false;
+    }
+
+    function numberFromInput(labelText) {
+      const fields = Array.from(document.querySelectorAll(".field"));
+      const field = fields.find((item) => item.querySelector("span")?.textContent.trim() === labelText);
+      const value = field?.querySelector("input")?.value;
+      const parsed = Number(String(value || "").replace(/[^0-9.-]/g, ""));
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function riskRewardPass(direction) {
+      const entry = numberFromInput("Entry");
+      const stop = numberFromInput("Stop");
+      const target = numberFromInput("Target 1");
+      if (entry === null || stop === null || target === null || !direction || direction === "Both") return false;
+      const risk = Math.abs(entry - stop);
+      if (risk === 0) return false;
+      const reward = direction === "Long Only" ? target - entry : entry - target;
+      return reward / risk >= 2;
+    }
+
+    function gateControl(name) {
+      return document.querySelector(`[data-gate="${name}"]`);
+    }
+
+    function setGate(name, value) {
+      const control = gateControl(name);
+      if (control) control.checked = Boolean(value);
+    }
+
+    function updateAutomatedGateChecks() {
+      const snapshot = window.templateSnapshot;
+      const context = snapshot?.instruments?.[selectedInstrumentKey()];
+      const direction = selectedDirection();
+      if (snapshot?.rate_context) {
+        setGate("macro", directionAgrees(direction, snapshot.rate_context.result));
+      }
+      if (context?.higher_timeframe_trend) {
+        setGate("htf", directionAgrees(direction, context.higher_timeframe_trend));
+      }
+      const trendPro = selectedTrendPro();
+      if (trendPro) {
+        setGate("trend-pro", directionAgrees(direction, trendPro));
+      }
+      setGate("risk-reward", riskRewardPass(direction));
     }
 
     function autoControl(name) {
@@ -886,14 +966,22 @@
         `${snapshot.rate_context.result} rates · ${snapshot.rate_context.score}/5`;
       document.getElementById("auto-vol").textContent =
         `VIX ${fmt(vix)} · MOVE ${move === null || move === undefined ? "-" : fmt(move)}`;
+      document.getElementById("auto-htf").textContent =
+        `${key} HTF: ${context.higher_timeframe_trend}`;
+      document.getElementById("auto-monthly").textContent =
+        `Monthly: ${context.monthly_trend.result} · Weekly: ${context.weekly_trend.result}`;
+      document.getElementById("monthly-trend-badge").textContent =
+        `Auto: ${context.monthly_trend.result}`;
 
       applyYields(snapshot);
       applyMovingAverages(context);
       setAutoValue("daily-trend-score", context.trend.score);
+      setAutoValue("weekly-trend-score", context.weekly_trend.score);
       setAutoValue("weekly-high", fmt(context.weekly_high));
       setAutoValue("weekly-low", fmt(context.weekly_low));
       setAutoChecked("above-weekly-high", context.last > context.weekly_high);
       setAutoChecked("below-weekly-low", context.last < context.weekly_low);
+      setAutoValue("monthly-trend-score", context.monthly_trend.score);
       setAutoValue("monthly-high", fmt(context.monthly_high));
       setAutoValue("monthly-low", fmt(context.monthly_low));
       setAutoValue("current-price", fmt(context.last));
