@@ -2,6 +2,17 @@
   "generated_at": "2026-06-27 16:09 UTC",
   "instruments": {
     "ES": {
+      "automation": {
+        "direction": "No Trade",
+        "structure_score": 8,
+        "todays_bias": "Neutral",
+        "trade_plan_score": 0,
+        "trend_pro_result": "Bearish",
+        "trend_pro_score": 15,
+        "volatility_score": 4,
+        "vwap": null,
+        "vwap_position": "Mixed"
+      },
       "atr_15m": 19.14,
       "atr_daily": 125.83,
       "higher_timeframe_trend": "Bearish",
@@ -41,6 +52,17 @@
       }
     },
     "ZB": {
+      "automation": {
+        "direction": "No Trade",
+        "structure_score": 8,
+        "todays_bias": "Neutral",
+        "trade_plan_score": 0,
+        "trend_pro_result": "Bullish",
+        "trend_pro_score": 15,
+        "volatility_score": 3,
+        "vwap": null,
+        "vwap_position": "Mixed"
+      },
       "atr_15m": 0.06,
       "atr_daily": 0.8,
       "higher_timeframe_trend": "Bullish",

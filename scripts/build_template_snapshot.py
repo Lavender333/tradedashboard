@@ -74,6 +74,19 @@ def atr(rows: List[Dict], period: int = 14):
     return sum(true_ranges[-period:]) / period
 
 
+def vwap(rows: List[Dict]):
+    weighted = 0.0
+    total_volume = 0.0
+    for row in rows:
+        volume = row.get("volume") or 0
+        typical = (row["high"] + row["low"] + row["close"]) / 3
+        weighted += typical * volume
+        total_volume += volume
+    if total_volume == 0:
+        return None
+    return weighted / total_volume
+
+
 def round_price(value):
     if value is None:
         return None
@@ -138,6 +151,48 @@ def range_break_result(last: float, high: float, low: float) -> Dict:
     return {"result": result, "score": score}
 
 
+def structure_score(last: float, previous_high: float, previous_low: float, on_high: float, on_low: float, vwap_value) -> Dict:
+    score = 4
+    if previous_low <= last <= previous_high:
+        score += 2
+    if on_low <= last <= on_high:
+        score += 2
+    if vwap_value is not None:
+        score += 1
+    score = min(10, score)
+    if vwap_value is None:
+        vwap_position = "Mixed"
+    elif last > vwap_value:
+        vwap_position = "Above"
+    elif last < vwap_value:
+        vwap_position = "Below"
+    else:
+        vwap_position = "Mixed"
+    return {"score": score, "vwap": round_price(vwap_value), "vwap_position": vwap_position}
+
+
+def volatility_score(name: str, vix, daily_atr_value) -> int:
+    if name == "ES" and vix is not None:
+        if vix < 16:
+            return 5
+        if vix < 22:
+            return 4
+        if vix < 30:
+            return 3
+        return 2
+    if daily_atr_value is not None:
+        return 3
+    return 0
+
+
+def trade_decision(rate_result: str, htf_result: str) -> Dict:
+    if rate_result == "Bullish" and htf_result == "Bullish":
+        return {"todays_bias": "Bull", "direction": "Long Only", "trade_plan_score": 3}
+    if rate_result == "Bearish" and htf_result == "Bearish":
+        return {"todays_bias": "Bear", "direction": "Short Only", "trade_plan_score": 3}
+    return {"todays_bias": "Neutral", "direction": "No Trade", "trade_plan_score": 0}
+
+
 def combined_htf_result(daily_result: str, weekly_result: str, monthly_result: str) -> str:
     votes = [daily_result, weekly_result, monthly_result]
     bullish = votes.count("Bullish")
@@ -149,7 +204,7 @@ def combined_htf_result(daily_result: str, weekly_result: str, monthly_result: s
     return "Neutral"
 
 
-def instrument_snapshot(name: str, symbol: str) -> Dict:
+def instrument_snapshot(name: str, symbol: str, rate_result: str, vix=None) -> Dict:
     daily = candles(symbol, "1y", "1d")
     intraday = candles(symbol, "5d", "15m")
     closes = [row["close"] for row in daily]
@@ -164,8 +219,30 @@ def instrument_snapshot(name: str, symbol: str) -> Dict:
     htf_result = combined_htf_result(trend["result"], weekly_trend["result"], monthly_trend["result"])
     intraday_atr = atr(intraday)
     daily_atr = atr(daily)
+    vwap_value = vwap(intraday[-26:])
+    structure = structure_score(
+        current,
+        prev_day["high"],
+        prev_day["low"],
+        max(row["high"] for row in intraday[:-26] or intraday),
+        min(row["low"] for row in intraday[:-26] or intraday),
+        vwap_value,
+    )
+    decision = trade_decision(rate_result, htf_result)
+    auto = {
+        "direction": decision["direction"],
+        "todays_bias": decision["todays_bias"],
+        "trade_plan_score": decision["trade_plan_score"],
+        "trend_pro_result": htf_result,
+        "trend_pro_score": 15 if htf_result != "Neutral" else 7,
+        "structure_score": structure["score"],
+        "volatility_score": volatility_score(name, vix, daily_atr),
+        "vwap": structure["vwap"],
+        "vwap_position": structure["vwap_position"],
+    }
 
     return {
+        "automation": auto,
         "name": name,
         "symbol": symbol,
         "last": round_price(current),
@@ -234,13 +311,13 @@ def safe_build() -> Dict:
             "30y": yield_direction("^TYX"),
         }
         rate_context = macro_rate_score(yields)
-        instruments = {
-            "ES": instrument_snapshot("ES", "ES=F"),
-            "ZB": instrument_snapshot("ZB", "ZB=F"),
-        }
         volatility = {
             "vix": quote_last("^VIX"),
             "move": None,
+        }
+        instruments = {
+            "ES": instrument_snapshot("ES", "ES=F", rate_context["result"], volatility["vix"]),
+            "ZB": instrument_snapshot("ZB", "ZB=F", rate_context["result"], volatility["vix"]),
         }
         return {
             "generated_at": generated_at,

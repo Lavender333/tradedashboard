@@ -588,7 +588,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="15" data-score="trendPro" placeholder="/15">
+                <input type="number" min="0" max="15" data-score="trendPro" data-auto="trend-pro-score" placeholder="/15">
               </div>
             </div>
           </div>
@@ -625,7 +625,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="10" data-score="structure" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="structure" data-auto="structure-score" placeholder="/10">
               </div>
             </div>
           </div>
@@ -685,7 +685,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="5" data-score="volatility" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="volatility" data-auto="volatility-score" placeholder="/5">
               </div>
             </div>
           </div>
@@ -735,7 +735,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="5" data-score="tradePlan" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="tradePlan" data-auto="trade-plan-score" placeholder="/5">
               </div>
             </div>
           </div>
@@ -843,6 +843,13 @@
       if (direction === "Long Only") return result === "Bullish";
       if (direction === "Short Only") return result === "Bearish";
       return false;
+    }
+
+    function setRadio(name, text) {
+      const radios = Array.from(document.querySelectorAll(`input[name="${name}"]`));
+      radios.forEach((radio) => {
+        radio.checked = radio.parentElement.textContent.trim() === text;
+      });
     }
 
     function numberFromInput(labelText) {
@@ -973,6 +980,13 @@
       document.getElementById("monthly-trend-badge").textContent =
         `Auto: ${context.monthly_trend.result}`;
 
+      const auto = context.automation || {};
+      setRadio("macro-result", snapshot.rate_context.result);
+      setRadio("trend-pro", auto.trend_pro_result || context.higher_timeframe_trend);
+      setRadio("vwap", auto.vwap_position || "Mixed");
+      setRadio("today-bias", auto.todays_bias || "Neutral");
+      setRadio("direction", auto.direction || "No Trade");
+
       applyYields(snapshot);
       applyMovingAverages(context);
       setAutoValue("daily-trend-score", context.trend.score);
@@ -991,10 +1005,14 @@
       setAutoValue("previous-day-low", fmt(context.previous_day_low));
       setAutoValue("overnight-high", fmt(context.overnight_high));
       setAutoValue("overnight-low", fmt(context.overnight_low));
+      setAutoValue("structure-score", auto.structure_score ?? "");
       setAutoValue("atr", `${fmt(context.atr_15m)} 15m / ${fmt(context.atr_daily)} daily`);
       setAutoValue("vix", key === "ES" ? fmt(vix) : "");
       setAutoValue("move", key === "ZB" && move !== null && move !== undefined ? fmt(move) : "");
       setAutoValue("average-daily-range", fmt(context.atr_daily));
+      setAutoValue("volatility-score", auto.volatility_score ?? "");
+      setAutoValue("trend-pro-score", auto.trend_pro_score ?? "");
+      setAutoValue("trade-plan-score", auto.trade_plan_score ?? "");
 
       updateScores();
     }
