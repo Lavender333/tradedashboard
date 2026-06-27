@@ -48,6 +48,22 @@ python lavender_dashboard.py
 
 The page auto-refreshes every 60 seconds and shows the same breakout/breakdown lines, dip and supply zones, ATR, bias text, provider/symbol, data freshness, ETH session window, overnight high/low, and prior RTH high/low. The JSON powering the page is available at `/api/snapshot`.
 
+### GitHub Pages
+The public static dashboard is available at:
+
+```text
+https://lavender333.github.io/tradedashboard/
+```
+
+GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site.
+
+To make the Pages dashboard live:
+
+1. In GitHub, add a repository secret named `DATABENTO_API_KEY`.
+2. Go to the repository's **Actions** tab.
+3. Run **Deploy GitHub Pages** once, or push a change to `main`.
+4. In repository settings, set Pages to use **GitHub Actions** if GitHub asks for a source.
+
 ## Notes
 - The script requires at least 20 candles to compute ATR. If fewer candles are returned, it will raise an error.
 - By default, levels are based on the current or most recent CME equity futures ETH session, with RTH and overnight reference levels included in the snapshot.

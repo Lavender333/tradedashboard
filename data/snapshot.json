@@ -1,0 +1,4 @@
+{
+  "error": "Set DATABENTO_API_KEY for accurate MES futures candles, or set MES_DATA_PROVIDER=alphavantage for the legacy fallback.",
+  "generated_at": "2026-06-27 04:22 UTC"
+}
