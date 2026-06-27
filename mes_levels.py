@@ -10,6 +10,7 @@ import pandas as pd
 import requests
 
 SYMBOL = os.environ.get("MES_SYMBOL", "MES.c.0")  # Databento continuous MES by default
+YAHOO_SYMBOL = os.environ.get("YAHOO_SYMBOL", "MES=F")
 RESOLUTION = int(os.environ.get("MES_RESOLUTION_MINUTES", "15"))
 LOOKBACK_HOURS = int(os.environ.get("MES_LOOKBACK_HOURS", "72"))
 ROUND_TO = 5.0
@@ -161,13 +162,81 @@ def fetch_alphavantage_candles() -> pd.DataFrame:
     return df
 
 
+def fetch_yahoo_candles() -> pd.DataFrame:
+    """Fetch delayed MES futures candles from Yahoo Finance."""
+    params = {
+        "range": f"{max(5, LOOKBACK_HOURS // 24 + 2)}d",
+        "interval": f"{RESOLUTION}m",
+        "includePrePost": "true",
+    }
+    headers = {"User-Agent": "Mozilla/5.0"}
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{YAHOO_SYMBOL}"
+    response = requests.get(url, params=params, headers=headers, timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+
+    chart = payload.get("chart", {})
+    if chart.get("error"):
+        raise RuntimeError(f"Yahoo Finance request failed: {chart['error']}")
+
+    results = chart.get("result") or []
+    if not results:
+        raise RuntimeError("No candle data returned from Yahoo Finance.")
+
+    result = results[0]
+    timestamps = result.get("timestamp") or []
+    quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+    rows = []
+    for index, timestamp in enumerate(timestamps):
+        try:
+            open_ = quote["open"][index]
+            high = quote["high"][index]
+            low = quote["low"][index]
+            close = quote["close"][index]
+            volume = quote.get("volume", [0] * len(timestamps))[index] or 0
+        except (IndexError, KeyError):
+            continue
+        if None in (open_, high, low, close):
+            continue
+        rows.append(
+            {
+                "time": datetime.fromtimestamp(timestamp, tz=timezone.utc),
+                "open": open_,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": volume,
+            }
+        )
+
+    df = _require_columns(pd.DataFrame(rows))
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
+    df = df[df["time"] >= cutoff].reset_index(drop=True)
+    if df.empty:
+        raise RuntimeError("No Yahoo Finance candle data available within the requested lookback window.")
+    return df
+
+
 def fetch_candles() -> pd.DataFrame:
     """Fetch recent MES candles from the configured provider."""
     if DATA_PROVIDER == "databento":
         return fetch_databento_candles()
+    if DATA_PROVIDER == "yahoo":
+        return fetch_yahoo_candles()
     if DATA_PROVIDER == "alphavantage":
         return fetch_alphavantage_candles()
     raise RuntimeError(f"Unsupported MES_DATA_PROVIDER: {DATA_PROVIDER}")
+
+
+def provider_symbol() -> str:
+    """Return the market symbol used by the active provider."""
+    if DATA_PROVIDER == "databento":
+        return SYMBOL
+    if DATA_PROVIDER == "yahoo":
+        return YAHOO_SYMBOL
+    if DATA_PROVIDER == "alphavantage":
+        return os.environ.get("ALPHAVANTAGE_SYMBOL", "MES=F")
+    return SYMBOL
 
 
 def compute_atr(df: pd.DataFrame, period: int = 14) -> float:
@@ -369,7 +438,7 @@ def get_snapshot() -> Dict[str, object]:
 
     return {
         "provider": DATA_PROVIDER,
-        "symbol": SYMBOL if DATA_PROVIDER == "databento" else os.environ.get("ALPHAVANTAGE_SYMBOL", "MES=F"),
+        "symbol": provider_symbol(),
         "data_status": "stale" if stale else "fresh",
         "stale_after_minutes": STALE_AFTER_MINUTES,
         "last_candle_age_minutes": round(last_age.total_seconds() / 60, 1),

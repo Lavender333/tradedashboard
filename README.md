@@ -55,9 +55,9 @@ The public static dashboard is available at:
 https://lavender333.github.io/tradedashboard/
 ```
 
-GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site.
+GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
 
-To make the Pages dashboard live:
+For trading-grade data:
 
 1. In GitHub, add a repository secret named `DATABENTO_API_KEY`.
 2. Go to the repository's **Actions** tab.
