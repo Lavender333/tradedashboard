@@ -155,6 +155,22 @@
       font-weight: 700;
       margin-left: 6px;
     }
+    .auto-decision-readout {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 750;
+      padding: 9px 10px;
+      min-height: 38px;
+    }
+    .auto-locked {
+      pointer-events: none;
+      opacity: 0.72;
+    }
+    .auto-hidden-choice {
+      display: none;
+    }
     .metric-label {
       color: var(--muted);
       font-size: 0.78rem;
@@ -466,14 +482,15 @@
             </div>
             <div class="field-group">
               <div class="group-title">Macro Result</div>
-              <div class="segmented">
+              <div class="segmented auto-hidden-choice">
                 <label><input type="radio" name="macro-result"> Bullish</label>
                 <label><input type="radio" name="macro-result"> Neutral</label>
                 <label><input type="radio" name="macro-result"> Bearish</label>
               </div>
+              <div class="auto-decision-readout" data-readout="macro-result">Auto: -</div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 5%</span>
-                <input type="number" min="0" max="5" data-score="macro" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="macro" data-auto="macro-result-score" placeholder="/5" readonly>
               </div>
             </div>
             <div class="field-group">
@@ -489,7 +506,7 @@
               <p class="tiny">ES and ZB: falling yields are bullish; rising yields are bearish.</p>
               <div class="field">
                 <span>Weight: 5%</span>
-                <input type="number" min="0" max="5" data-score="macro" data-auto="macro-rates-score" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="macro" data-auto="macro-rates-score" placeholder="/5" readonly>
               </div>
             </div>
             <div class="field-group">
@@ -526,7 +543,7 @@
               <p class="tiny">Above all five = +10; above four = +8; above three = +6; below three = 0.</p>
               <div class="field">
                 <span>Daily score</span>
-                <input type="number" min="0" max="15" data-score="trend" data-auto="daily-trend-score" placeholder="/15">
+                <input type="number" min="0" max="15" data-score="trend" data-auto="daily-trend-score" placeholder="/15" readonly>
               </div>
             </div>
             <div class="field-group">
@@ -541,7 +558,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
-                <input type="number" min="0" max="10" data-score="trend" data-auto="weekly-trend-score" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="trend" data-auto="weekly-trend-score" placeholder="/10" readonly>
               </div>
             </div>
             <div class="field-group">
@@ -552,7 +569,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
-                <input type="number" min="0" max="10" data-score="trend" data-auto="monthly-trend-score" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="trend" data-auto="monthly-trend-score" placeholder="/10" readonly>
               </div>
             </div>
           </div>
@@ -581,14 +598,15 @@
             <div class="field-group">
               <div class="group-title">Result</div>
               <div class="field"><span>Current Price</span><input type="text" data-auto="current-price"></div>
-              <div class="segmented" style="margin-top: 10px;">
+              <div class="segmented auto-hidden-choice" style="margin-top: 10px;">
                 <label><input type="radio" name="trend-pro"> Bullish</label>
                 <label><input type="radio" name="trend-pro"> Neutral</label>
                 <label><input type="radio" name="trend-pro"> Bearish</label>
               </div>
+              <div class="auto-decision-readout" data-readout="trend-pro" style="margin-top: 10px;">Auto: -</div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="15" data-score="trendPro" data-auto="trend-pro-score" placeholder="/15">
+                <input type="number" min="0" max="15" data-score="trendPro" data-auto="trend-pro-score" placeholder="/15" readonly>
               </div>
             </div>
           </div>
@@ -609,11 +627,12 @@
             </div>
             <div class="field-group">
               <div class="group-title">VWAP</div>
-              <div class="segmented">
+              <div class="segmented auto-hidden-choice">
                 <label><input type="radio" name="vwap"> Above</label>
                 <label><input type="radio" name="vwap"> Below</label>
                 <label><input type="radio" name="vwap"> Mixed</label>
               </div>
+              <div class="auto-decision-readout" data-readout="vwap">Auto: -</div>
             </div>
             <div class="field-group">
               <div class="group-title">Reference Levels</div>
@@ -625,7 +644,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="10" data-score="structure" data-auto="structure-score" placeholder="/10">
+                <input type="number" min="0" max="10" data-score="structure" data-auto="structure-score" placeholder="/10" readonly>
               </div>
             </div>
           </div>
@@ -685,7 +704,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="5" data-score="volatility" data-auto="volatility-score" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="volatility" data-auto="volatility-score" placeholder="/5" readonly>
               </div>
             </div>
           </div>
@@ -699,22 +718,24 @@
           <div class="subgrid">
             <div class="field-group">
               <div class="group-title">Today's Bias</div>
-              <div class="checks">
+              <div class="checks auto-hidden-choice">
                 <label><input type="radio" name="today-bias"> Strong Bull</label>
                 <label><input type="radio" name="today-bias"> Bull</label>
                 <label><input type="radio" name="today-bias"> Neutral</label>
                 <label><input type="radio" name="today-bias"> Bear</label>
                 <label><input type="radio" name="today-bias"> Strong Bear</label>
               </div>
+              <div class="auto-decision-readout" data-readout="today-bias">Auto: -</div>
             </div>
             <div class="field-group">
               <div class="group-title">Direction</div>
-              <div class="checks">
+              <div class="checks auto-hidden-choice">
                 <label><input type="radio" name="direction"> Long Only</label>
                 <label><input type="radio" name="direction"> Short Only</label>
                 <label><input type="radio" name="direction"> Both</label>
                 <label><input type="radio" name="direction"> No Trade</label>
               </div>
+              <div class="auto-decision-readout" data-readout="direction">Auto: -</div>
             </div>
             <div class="field-group">
               <div class="group-title">Entry Type</div>
@@ -735,7 +756,7 @@
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
-                <input type="number" min="0" max="5" data-score="tradePlan" data-auto="trade-plan-score" placeholder="/5">
+                <input type="number" min="0" max="5" data-score="tradePlan" data-auto="trade-plan-score" placeholder="/5" readonly>
               </div>
             </div>
           </div>
@@ -828,13 +849,11 @@
     }
 
     function selectedDirection() {
-      const checked = document.querySelector('input[name="direction"]:checked');
-      return checked ? checked.parentElement.textContent.trim() : "";
+      return window.autoDirection || "";
     }
 
     function selectedTrendPro() {
-      const checked = document.querySelector('input[name="trend-pro"]:checked');
-      return checked ? checked.parentElement.textContent.trim() : "";
+      return window.autoTrendPro || "";
     }
 
     function directionAgrees(direction, result) {
@@ -850,6 +869,11 @@
       radios.forEach((radio) => {
         radio.checked = radio.parentElement.textContent.trim() === text;
       });
+    }
+
+    function setReadout(name, text) {
+      const node = document.querySelector(`[data-readout="${name}"]`);
+      if (node) node.textContent = "Auto: " + (text || "-");
     }
 
     function numberFromInput(labelText) {
@@ -981,11 +1005,19 @@
         `Auto: ${context.monthly_trend.result}`;
 
       const auto = context.automation || {};
+      window.autoDirection = auto.direction || "No Trade";
+      window.autoTrendPro = auto.trend_pro_result || context.higher_timeframe_trend;
       setRadio("macro-result", snapshot.rate_context.result);
-      setRadio("trend-pro", auto.trend_pro_result || context.higher_timeframe_trend);
+      setReadout("macro-result", snapshot.rate_context.result);
+      setAutoValue("macro-result-score", snapshot.rate_context?.score ?? "");
+      setRadio("trend-pro", window.autoTrendPro);
+      setReadout("trend-pro", window.autoTrendPro);
       setRadio("vwap", auto.vwap_position || "Mixed");
+      setReadout("vwap", auto.vwap_position || "Mixed");
       setRadio("today-bias", auto.todays_bias || "Neutral");
-      setRadio("direction", auto.direction || "No Trade");
+      setReadout("today-bias", auto.todays_bias || "Neutral");
+      setRadio("direction", window.autoDirection);
+      setReadout("direction", window.autoDirection);
 
       applyYields(snapshot);
       applyMovingAverages(context);
@@ -1031,6 +1063,24 @@
 
     function formControls() {
       return Array.from(document.querySelectorAll("input, textarea, select"));
+    }
+
+    function lockAutomatedControls() {
+      document.querySelectorAll("[data-auto]").forEach((control) => {
+        if (control.type === "checkbox" || control.type === "radio") {
+          control.disabled = true;
+          control.closest("label")?.classList.add("auto-locked");
+        } else {
+          control.readOnly = true;
+        }
+      });
+      ["macro", "htf", "trend-pro", "risk-reward"].forEach((name) => {
+        const control = gateControl(name);
+        if (control) {
+          control.disabled = true;
+          control.closest("label")?.classList.add("auto-locked");
+        }
+      });
     }
 
     function saveState() {
@@ -1084,6 +1134,7 @@
     });
 
     restoreState();
+    lockAutomatedControls();
     updateScores();
     loadAutomation();
   </script>

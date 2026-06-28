@@ -70,8 +70,9 @@ The ES/ZB template auto-fills the measurable market context from delayed public 
 - Previous day high/low
 - Opening range and overnight high/low
 - ATR, VIX, and Treasury-yield direction
+- Macro result, Trend Pro proxy, VWAP state, today’s bias, direction, structure score, volatility score, trade-plan score, and the objective gate checks
 
-Manual confirmation is still required for economic news, Trend Pro levels, VWAP judgment, Bookmap/order-flow reads, trade entries, stops, targets, and the Institutional Alignment Gate.
+Manual confirmation is still required for economic news, custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
 
 GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
 
