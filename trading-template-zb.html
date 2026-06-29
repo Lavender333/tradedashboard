@@ -1029,6 +1029,77 @@
             </div>
           </div>
         </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">Professional ZB Institutional Plan</div>
+            <div class="weight">Auto</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Step 1 - Higher-Timeframe Bias</div>
+              <div class="context-readout">
+                <div class="context-main" id="zb-htf-bias">Auto: -</div>
+                <div class="context-value" id="zb-htf-why">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Step 2 - Fundamental Context</div>
+              <div class="context-readout">
+                <div class="context-main" id="zb-fundamental-context">Auto: -</div>
+                <div class="context-value" id="zb-fundamental-why">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Step 3 - Static Institutional Levels</div>
+              <div class="context-readout">
+                <div class="context-value" id="zb-static-levels">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Step 4 - Dynamic Execution Levels</div>
+              <div class="context-readout">
+                <div class="context-value" id="zb-dynamic-levels">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Step 5 - Professional Trade Plan</div>
+              <div class="context-readout">
+                <div class="context-main" id="zb-primary-plan">Primary: -</div>
+                <div class="context-grid">
+                  <div class="context-item">
+                    <div class="context-label">Alternate Bullish Plan</div>
+                    <div class="context-value" id="zb-alt-bull">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Alternate Bearish Plan</div>
+                    <div class="context-value" id="zb-alt-bear">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">No Trade Conditions</div>
+                    <div class="context-value" id="zb-no-trade">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Step 6 - Live Trade Checklist</div>
+              <div class="checks">
+                <label><input type="checkbox" data-auto="zb-check-htf"> Higher timeframe agrees</label>
+                <label><input type="checkbox" data-auto="zb-check-news"> News risk acceptable</label>
+                <label><input type="checkbox" data-auto="zb-check-breakout"> Breakout level identified</label>
+                <label><input type="checkbox" data-auto="zb-check-acceptance"> Acceptance confirmed</label>
+                <label><input type="checkbox" data-auto="zb-check-retest"> Retest occurred</label>
+                <label><input type="checkbox" data-auto="zb-check-confirmation"> Confirmation candle formed</label>
+                <label><input type="checkbox" data-auto="zb-check-entry-zone"> Entry in execution zone</label>
+                <label><input type="checkbox" data-auto="zb-check-stop"> Structure stop defined</label>
+                <label><input type="checkbox" data-auto="zb-check-rr"> Minimum 2:1 reward/risk</label>
+                <label><input type="checkbox" data-auto="zb-check-target"> Institutional target identified</label>
+              </div>
+              <div class="auto-decision-readout" id="zb-checklist-note">If any box is unchecked: No Trade.</div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <aside class="score-panel">
@@ -1514,6 +1585,137 @@
       }
     }
 
+    function zbInstitutionalBias(context) {
+      const auto = context.automation || {};
+      const aboveCount = context.trend?.above_count || 0;
+      const daily = context.trend?.result || "Neutral";
+      const weekly = context.weekly_trend?.result || "Neutral";
+      const monthly = context.monthly_trend?.result || "Neutral";
+      const htf = context.higher_timeframe_trend || "Neutral";
+      const trendPro = auto.trend_pro_result || htf;
+      const bullVotes = [daily, weekly, monthly, htf, trendPro].filter((item) => item === "Bullish").length;
+      const bearVotes = [daily, weekly, monthly, htf, trendPro].filter((item) => item === "Bearish").length;
+      let bias = "Neutral";
+      if (bullVotes >= 4 && aboveCount >= 4) bias = "Strong Bullish";
+      else if (bullVotes >= 3) bias = "Bullish";
+      else if (bearVotes >= 4 && aboveCount <= 1) bias = "Strong Bearish";
+      else if (bearVotes >= 3) bias = "Bearish";
+      const why = `Monthly ${monthly}; Weekly ${weekly}; Daily ${daily}; 240-minute proxy ${trendPro}; 60-minute/current session ${auto.vwap_position || "Mixed"}; price is above ${aboveCount}/5 daily moving averages.`;
+      return { bias, why };
+    }
+
+    function zbFundamentalContext(snapshot, context) {
+      const rateResult = snapshot.rate_context?.result || "Neutral";
+      const pattern = newsPattern(snapshot, "ZB");
+      const analysis = masterPatternAnalysis(snapshot, context);
+      const events = Array.isArray(snapshot?.economic_calendar) ? snapshot.economic_calendar : [];
+      const today = etDateKey(snapshotDate(snapshot));
+      const todaysEvents = events.filter((event) => eventDateKey(event) === today);
+      const highImpact = todaysEvents.filter((event) => eventKind(event) === "high-impact").length;
+      const fed = todaysEvents.filter((event) => eventKind(event) === "fed").length;
+      const treasury = todaysEvents.filter((event) => eventKind(event) === "treasury").length;
+      let stance = "Neutral";
+      if (rateResult === "Bullish") stance = "Risk-Off / Bond Supportive";
+      if (rateResult === "Bearish") stance = "Risk-On / Bond Pressure";
+      const calendar = todaysEvents.length
+        ? todaysEvents.map((event) => `${eventTime(event)} ${eventTitle(event)}`).join("; ")
+        : "No scheduled macro reports found from the live calendar.";
+      const why = `${analysis.ratesRead} ${pattern.behavior} Calendar: ${calendar} High-impact ${highImpact}; Fed ${fed}; Treasury auction/supply ${treasury}. ${analysis.vixRead}`;
+      return { stance, why };
+    }
+
+    function levelText(label, value, rank) {
+      return `${rank}: ${label} ${zbFmt(value)}`;
+    }
+
+    function zbStaticLevels(context) {
+      const ma = context.moving_averages || {};
+      const auto = context.automation || {};
+      return [
+        levelText("Previous Day High", context.previous_day_high, "Major"),
+        levelText("Previous Day Low", context.previous_day_low, "Major"),
+        levelText("Overnight High", context.overnight_high, "Major"),
+        levelText("Overnight Low", context.overnight_low, "Major"),
+        levelText("Weekly High", context.weekly_high, "Major"),
+        levelText("Weekly Low", context.weekly_low, "Major"),
+        levelText("Monthly High", context.monthly_high, "Major"),
+        levelText("Monthly Low", context.monthly_low, "Major"),
+        levelText("Daily 200 MA", ma.ma200, "Major"),
+        levelText("Daily 20 MA", ma.ma20, "Moderate"),
+        levelText("Daily 50 MA", ma.ma50, "Moderate"),
+        levelText("Daily 72 MA", ma.ma72, "Moderate"),
+        levelText("Daily 100 MA", ma.ma100, "Moderate"),
+        levelText("Session VWAP", auto.vwap, "Moderate"),
+        levelText("Opening Range High", context.opening_range_high, "Moderate"),
+        levelText("Opening Range Low", context.opening_range_low, "Moderate"),
+        `Minor: Major volume nodes unavailable until a volume-profile feed is connected.`
+      ].join(" | ");
+    }
+
+    function zbDynamicLevels(context) {
+      const auto = context.automation || {};
+      const ladder = executionLadder(context);
+      const side = auto.direction === "Short Only" ? "Bearish" : auto.direction === "Long Only" ? "Bullish" : "No Trade";
+      const invalidation = auto.direction === "Short Only"
+        ? "Invalid if a completed 5-minute candle reclaims the breakdown level, VWAP is regained, or high-impact news reverses yields lower."
+        : auto.direction === "Long Only"
+          ? "Invalid if a completed 5-minute candle loses the breakout level, VWAP fails, or high-impact news reverses yields higher."
+          : "Invalid because there is no accepted institutional direction.";
+      return `${side} setup. Breakout level ${zbFmt(ladder.breakout)}. Acceptance: ${ladder.acceptance} Execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}. Confirmation: ${ladder.confirmation} Retest: ${ladder.trigger} Stop: ${zbFmt(ladder.stop)}. Scale-in: second contract only after a successful retest, bull/bear flag, higher low/lower high, or acceptance above/below the next level. Scale-out: ${ladder.scale} ${invalidation}`;
+    }
+
+    function entryNearLowerEdgeForTwoToOne(context) {
+      const auto = context.automation || {};
+      const ladder = executionLadder(context);
+      if (!ladder.breakout || !ladder.zoneLow || !ladder.scale1 || auto.direction === "No Trade") return false;
+      const entry = auto.direction === "Short Only" ? ladder.zoneHigh : ladder.zoneLow;
+      const risk = Math.abs(entry - ladder.stop);
+      const reward = Math.abs(ladder.scale1 - entry);
+      return risk > 0 && reward / risk >= 2;
+    }
+
+    function applyZbInstitutionalPlan(snapshot, context) {
+      const auto = context.automation || {};
+      const stale = context.data_status === "stale";
+      const direction = stale ? "No Trade" : auto.direction || "No Trade";
+      const ladder = executionLadder(context);
+      const htf = zbInstitutionalBias(context);
+      const fundamentals = zbFundamentalContext(snapshot, context);
+      const hasBreakout = Number.isFinite(Number(ladder.breakout)) && direction !== "No Trade";
+      const htfAgrees = directionAgrees(direction, context.higher_timeframe_trend);
+      const newsAcceptable = macroResultFromNews(snapshot).score >= 4 && !stale;
+      const rrOk = entryNearLowerEdgeForTwoToOne(context);
+
+      setText("zb-htf-bias", `Auto: ${stale ? "No Trade - stale data" : htf.bias}`);
+      setText("zb-htf-why", htf.why);
+      setText("zb-fundamental-context", `Auto: ${fundamentals.stance}`);
+      setText("zb-fundamental-why", fundamentals.why);
+      setText("zb-static-levels", zbStaticLevels(context));
+      setText("zb-dynamic-levels", zbDynamicLevels(context));
+
+      const primary = direction === "No Trade"
+        ? "Primary: No Trade until fresh data, institutional gate alignment, and 5-minute or 15-minute acceptance are confirmed."
+        : `Primary: ${direction}. Breakout ${zbFmt(ladder.breakout)}; acceptance required; execute ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)} only after the retest and confirmation candle. Stop ${zbFmt(ladder.stop)}. Target 1 ${zbFmt(ladder.scale1)}. Target 2 / runner ${zbFmt(ladder.scale2)}. Probability follows gate score, but no entry without live acceptance.`;
+      setText("zb-primary-plan", primary);
+      setText("zb-alt-bull", `Bullish only if ZB reclaims ${zbFmt((context.automation || {}).trend_pro_240_bullish_level || context.opening_range_high || context.overnight_high)}, accepts above it, retests, and rejects lower prices.`);
+      setText("zb-alt-bear", `Bearish only if ZB loses ${zbFmt((context.automation || {}).trend_pro_240_bearish_level || context.opening_range_low || context.overnight_low)}, accepts below it, retests, and rejects higher prices.`);
+      setText("zb-no-trade", "Stand aside if data is stale, no 5-minute/15-minute acceptance, no retest, no confirmation candle, entry is outside the execution zone, reward/risk is below 2:1, VWAP is lost/reclaimed against the setup, or high-impact news reverses the auction/yield read.");
+
+      setAutoChecked("zb-check-htf", htfAgrees);
+      setAutoChecked("zb-check-news", newsAcceptable);
+      setAutoChecked("zb-check-breakout", hasBreakout);
+      setAutoChecked("zb-check-acceptance", false);
+      setAutoChecked("zb-check-retest", false);
+      setAutoChecked("zb-check-confirmation", false);
+      setAutoChecked("zb-check-entry-zone", false);
+      setAutoChecked("zb-check-stop", Number.isFinite(Number(ladder.stop)) && hasBreakout);
+      setAutoChecked("zb-check-rr", rrOk);
+      setAutoChecked("zb-check-target", Number.isFinite(Number(ladder.scale1)) && Number.isFinite(Number(ladder.scale2)) && hasBreakout);
+      setText("zb-checklist-note", stale
+        ? "If any box is unchecked: No Trade. Current data is stale, so execution is blocked."
+        : "If any box is unchecked: No Trade. Acceptance, retest, confirmation, and entry zone must be verified from the live 5-minute/15-minute chart.");
+    }
+
     function selectedRadioText(name) {
       const selected = document.querySelector(`input[name="${name}"]:checked`);
       return selected?.parentElement?.textContent.trim() || "";
@@ -1825,6 +2027,7 @@
       renderEconomicCalendar(snapshot);
       applyMasterPatternAnalysis(snapshot, context);
       applyFinalOutput(snapshot, context);
+      applyZbInstitutionalPlan(snapshot, context);
 
       updateScores();
     }
