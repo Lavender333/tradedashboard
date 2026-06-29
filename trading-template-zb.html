@@ -960,14 +960,46 @@
             <div class="field-group">
               <div class="group-title">Trade Levels</div>
               <div class="field-row">
-                <div class="field"><span>Entry</span><input type="text" data-auto="trade-entry"></div>
-                <div class="field"><span>Stop</span><input type="text" data-auto="trade-stop"></div>
-                <div class="field"><span>Target 1</span><input type="text" data-auto="trade-target-1"></div>
-                <div class="field"><span>Target 2</span><input type="text" data-auto="trade-target-2"></div>
+                <div class="field"><span>Entry Trigger</span><input type="text" data-auto="trade-entry"></div>
+                <div class="field"><span>Structure Stop</span><input type="text" data-auto="trade-stop"></div>
+                <div class="field"><span>Scale 1</span><input type="text" data-auto="trade-target-1"></div>
+                <div class="field"><span>Scale 2 / Runner</span><input type="text" data-auto="trade-target-2"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Score</span>
                 <input type="number" min="0" max="5" data-score="tradePlan" data-auto="trade-plan-score" placeholder="/5" readonly>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Execution Ladder</div>
+              <div class="context-readout">
+                <div class="context-main" id="execution-trigger">Auto: -</div>
+                <div class="context-grid">
+                  <div class="context-item">
+                    <div class="context-label">Breakout Level</div>
+                    <div class="context-value" id="execution-breakout">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Acceptance</div>
+                    <div class="context-value" id="execution-acceptance">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Execution Zone</div>
+                    <div class="context-value" id="execution-zone">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Confirmation Candle</div>
+                    <div class="context-value" id="execution-confirmation">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Stop Location</div>
+                    <div class="context-value" id="execution-stop">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Scale-Out Targets</div>
+                    <div class="context-value" id="execution-scale">-</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1461,22 +1493,23 @@
 
     function applyFinalOutput(snapshot, context) {
       const auto = context.automation || {};
+      const ladder = executionLadder(context);
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
-      const entry = direction === "No Trade" ? "-" : fmt(auto.entry);
+      const entry = direction === "No Trade" ? "-" : ladder.trigger;
       const time = stale ? "Wait for fresh market data" : timeWindowLabel(snapshot, context.name || selectedInstrumentKey());
       const note = stale
         ? "No day trade until the latest candle is fresh."
         : direction === "No Trade"
           ? "No day trade. Wait for a cleaner setup."
-          : `Use ${auto.entry_type || "confirmed setup"} only if the gate remains valid.`;
+          : `Breakout ${zbFmt(ladder.breakout)}; execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}; stop ${zbFmt(ladder.stop)}.`;
       setText("final-direction", direction);
       setText("final-entry", entry);
       setText("final-time", time);
       setText("final-note", note);
       const finalBox = document.getElementById("final-output-box");
       if (finalBox) {
-        finalBox.textContent = `Final Output: ${direction} · Entry ${entry} · Time ${time}`;
+        finalBox.textContent = `Final Output: ${direction} · Entry ${direction === "No Trade" ? "-" : `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`} · Time ${time}`;
         finalBox.className = "gate-status " + (direction === "No Trade" ? "bad" : "good");
       }
     }
@@ -1548,6 +1581,87 @@
     function setText(id, value) {
       const node = document.getElementById(id);
       if (node) node.textContent = value || "-";
+    }
+
+    function zbFmt(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+      const whole = Math.trunc(Number(value));
+      let ticks = Math.round((Number(value) - whole) * 32);
+      if (ticks >= 32) return `${whole + 1}'00`;
+      return `${whole}'${String(ticks).padStart(2, "0")}`;
+    }
+
+    function executionLadder(context) {
+      const auto = context.automation || {};
+      const direction = auto.direction || "No Trade";
+      const tick = 1 / 32;
+      const bullishBreakout = auto.trend_pro_240_bullish_level || context.opening_range_high || context.overnight_high;
+      const bearishBreakout = auto.trend_pro_240_bearish_level || context.opening_range_low || context.overnight_low;
+      if (direction === "Long Only") {
+        const breakout = bullishBreakout;
+        const zoneLow = breakout + tick;
+        const zoneHigh = breakout + (3 * tick);
+        const scale1 = zoneLow + (5 * tick);
+        const scale2 = Math.max(context.overnight_high || scale1, scale1 + (2 * tick));
+        return {
+          breakout,
+          zoneLow,
+          zoneHigh,
+          stop: breakout,
+          scale1,
+          scale2,
+          trigger: "Buy the first successful retest after acceptance above the breakout level. Do not chase an extended move.",
+          acceptance: "Two 5-minute closes above breakout, or one strong impulsive close with increasing volume; 15-minute close gives higher confidence.",
+          confirmation: "Bullish rejection candle holds the execution zone after the retest.",
+          scale: `Scale 1 at ${zbFmt(scale1)} (+5 ticks). Scale 2 near ${zbFmt(scale2)} or trail under higher lows.`
+        };
+      }
+      if (direction === "Short Only") {
+        const breakout = bearishBreakout;
+        const zoneHigh = breakout - tick;
+        const zoneLow = breakout - (3 * tick);
+        const scale1 = zoneHigh - (5 * tick);
+        const scale2 = Math.min(context.overnight_low || scale1, scale1 - (2 * tick));
+        return {
+          breakout,
+          zoneLow,
+          zoneHigh,
+          stop: breakout,
+          scale1,
+          scale2,
+          trigger: "Sell the first successful retest after acceptance below the breakdown level. Do not chase an extended move.",
+          acceptance: "Two 5-minute closes below breakdown, or one strong impulsive close with increasing volume; 15-minute close gives higher confidence.",
+          confirmation: "Bearish rejection candle holds the execution zone after the retest.",
+          scale: `Scale 1 at ${zbFmt(scale1)} (+5 ticks). Scale 2 near ${zbFmt(scale2)} or trail over lower highs.`
+        };
+      }
+      return {
+        breakout: null,
+        zoneLow: null,
+        zoneHigh: null,
+        stop: null,
+        scale1: null,
+        scale2: null,
+        trigger: "No execution ladder until direction, fresh data, and gate alignment agree.",
+        acceptance: "No Trade if neither 5-minute nor 15-minute acceptance is present.",
+        confirmation: "Wait for acceptance, retest, and rejection candle.",
+        scale: "No scale-out targets without an accepted setup."
+      };
+    }
+
+    function applyExecutionLadder(context) {
+      const ladder = executionLadder(context);
+      setText("execution-trigger", `Auto: ${ladder.trigger}`);
+      setText("execution-breakout", zbFmt(ladder.breakout));
+      setText("execution-acceptance", ladder.acceptance);
+      setText("execution-zone", `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`);
+      setText("execution-confirmation", ladder.confirmation);
+      setText("execution-stop", zbFmt(ladder.stop));
+      setText("execution-scale", ladder.scale);
+      setAutoValue("trade-entry", ladder.trigger);
+      setAutoValue("trade-stop", zbFmt(ladder.stop));
+      setAutoValue("trade-target-1", zbFmt(ladder.scale1));
+      setAutoValue("trade-target-2", ladder.scale);
     }
 
     function setAutoChecked(name, checked) {
@@ -1705,10 +1819,7 @@
       setAutoChecked("absorption", false);
       setAutoChecked("icebergs", false);
       applyEntryType(auto.entry_type || "No Trade");
-      setAutoValue("trade-entry", fmt(auto.entry));
-      setAutoValue("trade-stop", fmt(auto.stop));
-      setAutoValue("trade-target-1", fmt(auto.target1));
-      setAutoValue("trade-target-2", fmt(auto.target2));
+      applyExecutionLadder(context);
       setAutoValue("trade-plan-score", auto.trade_plan_score ?? "");
       applyOvernightNews(snapshot);
       renderEconomicCalendar(snapshot);
