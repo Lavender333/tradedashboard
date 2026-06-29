@@ -1063,6 +1063,26 @@
               </div>
             </div>
             <div class="field-group">
+              <div class="group-title">Step 4A - Best Entry Point</div>
+              <div class="context-readout">
+                <div class="context-main" id="zb-one-trade-entry">If I can only take one trade today: -</div>
+                <div class="context-grid">
+                  <div class="context-item">
+                    <div class="context-label">Ranked Entries</div>
+                    <div class="context-value" id="zb-ranked-entries">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Chase Filter</div>
+                    <div class="context-value" id="zb-chase-filter">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Optimal Entry Score</div>
+                    <div class="context-value" id="zb-optimal-entry-score">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="field-group">
               <div class="group-title">Step 5 - Professional Trade Plan</div>
               <div class="context-readout">
                 <div class="context-main" id="zb-primary-plan">Primary: -</div>
@@ -1565,23 +1585,30 @@
     function applyFinalOutput(snapshot, context) {
       const auto = context.automation || {};
       const ladder = executionLadder(context);
+      const candidates = zbEntryCandidates(snapshot, context);
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
-      const entry = direction === "No Trade" ? "-" : ladder.trigger;
+      const entry = direction === "No Trade"
+        ? "-"
+        : candidates.best
+          ? `${candidates.best.type}: ${candidates.best.price}`
+          : "No entry yet. Wait for 85+ acceptance retest.";
       const time = stale ? "Wait for fresh market data" : timeWindowLabel(snapshot, context.name || selectedInstrumentKey());
       const note = stale
         ? "No day trade until the latest candle is fresh."
         : direction === "No Trade"
           ? "No day trade. Wait for a cleaner setup."
-          : `Breakout ${zbFmt(ladder.breakout)}; execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}; stop ${zbFmt(ladder.stop)}.`;
+          : candidates.best
+            ? `Best single trade: ${candidates.best.type} at ${candidates.best.price}. Stop ${candidates.best.stop}. Target 1 ${candidates.best.target1}.`
+            : `No entry now. Today's computed breakout ${zbFmt(ladder.breakout)}; execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}; wait for acceptance and retest.`;
       setText("final-direction", direction);
       setText("final-entry", entry);
       setText("final-time", time);
       setText("final-note", note);
       const finalBox = document.getElementById("final-output-box");
       if (finalBox) {
-        finalBox.textContent = `Final Output: ${direction} · Entry ${direction === "No Trade" ? "-" : `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`} · Time ${time}`;
-        finalBox.className = "gate-status " + (direction === "No Trade" ? "bad" : "good");
+        finalBox.textContent = `Final Output: ${direction} · Entry ${entry} · Time ${time}`;
+        finalBox.className = "gate-status " + (direction === "No Trade" || !candidates.best ? "bad" : "good");
       }
     }
 
@@ -1661,7 +1688,7 @@
         : auto.direction === "Long Only"
           ? "Invalid if a completed 5-minute candle loses the breakout level, VWAP fails, or high-impact news reverses yields higher."
           : "Invalid because there is no accepted institutional direction.";
-      return `${side} setup. Breakout level ${zbFmt(ladder.breakout)}. Acceptance: ${ladder.acceptance} Execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}. Confirmation: ${ladder.confirmation} Retest: ${ladder.trigger} Stop: ${zbFmt(ladder.stop)}. Scale-in: second contract only after a successful retest, bull/bear flag, higher low/lower high, or acceptance above/below the next level. Scale-out: ${ladder.scale} ${invalidation}`;
+      return `${side} setup. Today's computed breakout level ${zbFmt(ladder.breakout)}. Today's computed execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}. Acceptance: ${ladder.acceptance} Confirmation: ${ladder.confirmation} Retest: ${ladder.trigger} Stop: ${zbFmt(ladder.stop)}. Scale-in: second contract only after a successful retest, bull/bear flag, higher low/lower high, or acceptance above/below the next level. Scale-out: ${ladder.scale} ${invalidation}`;
     }
 
     function entryNearLowerEdgeForTwoToOne(context) {
@@ -1674,11 +1701,169 @@
       return risk > 0 && reward / risk >= 2;
     }
 
+    function ticksBetween(left, right) {
+      if (!Number.isFinite(Number(left)) || !Number.isFinite(Number(right))) return null;
+      return Math.round(Math.abs(Number(left) - Number(right)) * 32);
+    }
+
+    function rrText(entry, stop, target) {
+      const risk = ticksBetween(entry, stop);
+      const reward = ticksBetween(entry, target);
+      if (!risk) return { risk, reward, ratio: 0, text: "-" };
+      const ratio = reward / risk;
+      return { risk, reward, ratio, text: `1:${ratio.toFixed(1)}` };
+    }
+
+    function entryScore(parts) {
+      return Math.round(
+        (parts.htf ? 25 : 0) +
+        (parts.acceptance ? 20 : 0) +
+        (parts.retest ? 20 : 0) +
+        (parts.rr ? 15 : 0) +
+        (parts.structure ? 10 : 0) +
+        (parts.news ? 10 : 0)
+      );
+    }
+
+    function entryConfidence(score, rankPenalty = 0) {
+      return Math.max(0, Math.min(100, score - rankPenalty));
+    }
+
+    function entryLine(entry) {
+      return `${entry.rank} ${entry.type}: Entry ${entry.price}; Why: ${entry.why}; Confirmation: ${entry.confirmation}; Stop ${entry.stop}; Risk ${entry.riskTicks} ticks; Target 1 ${entry.target1}; Target 2 ${entry.target2}; R:R ${entry.rr}; Confidence ${entry.confidence}%.`;
+    }
+
+    function zbEntryCandidates(snapshot, context) {
+      const auto = context.automation || {};
+      const direction = context.data_status === "stale" ? "No Trade" : auto.direction || "No Trade";
+      const ladder = executionLadder(context);
+      const htfOk = directionAgrees(direction, context.higher_timeframe_trend);
+      const newsOk = macroResultFromNews(snapshot).score >= 4 && context.data_status !== "stale";
+      const hasTrade = direction === "Long Only" || direction === "Short Only";
+      if (!hasTrade || !Number.isFinite(Number(ladder.breakout))) {
+        return {
+          entries: [],
+          chase: "Do not enter now. Wait for a fresh institutional setup.",
+          best: null,
+          scoreText: "No score because no valid ZB direction is active."
+        };
+      }
+
+      const longSide = direction === "Long Only";
+      const bestEntry = longSide ? ladder.zoneLow : ladder.zoneHigh;
+      const continuationEntry = longSide ? ladder.scale1 : ladder.scale1;
+      const pullbackEntry = longSide ? ladder.zoneLow : ladder.zoneHigh;
+      const firstResistance = ladder.scale1;
+      const secondTarget = ladder.scale2;
+      const currentDistance = ticksBetween(context.last, longSide ? ladder.zoneHigh : ladder.zoneLow);
+      const extended = currentDistance !== null && currentDistance > 10;
+      const bestRr = rrText(bestEntry, ladder.stop, firstResistance);
+      const continuationStop = longSide ? ladder.zoneHigh : ladder.zoneLow;
+      const continuationTarget = longSide ? continuationEntry + (5 / 32) : continuationEntry - (5 / 32);
+      const continuationRr = rrText(continuationEntry, continuationStop, continuationTarget);
+      const pullbackRr = rrText(pullbackEntry, ladder.stop, firstResistance);
+      const acceptanceKnown = false;
+      const retestKnown = false;
+
+      const entry1Score = entryScore({
+        htf: htfOk,
+        acceptance: acceptanceKnown,
+        retest: retestKnown,
+        rr: bestRr.ratio >= 2,
+        structure: true,
+        news: newsOk
+      });
+      const entry2Score = entryScore({
+        htf: htfOk,
+        acceptance: acceptanceKnown,
+        retest: false,
+        rr: continuationRr.ratio >= 2,
+        structure: !extended,
+        news: newsOk
+      });
+      const entry3Score = entryScore({
+        htf: htfOk,
+        acceptance: acceptanceKnown,
+        retest: retestKnown,
+        rr: pullbackRr.ratio >= 2,
+        structure: true,
+        news: newsOk
+      });
+
+      const entries = [
+        {
+          rank: "#1",
+          type: "Acceptance Retest",
+          rawPrice: bestEntry,
+          price: `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`,
+          why: "Lowest structural risk after institutions accept value beyond today's breakout level.",
+          confirmation: longSide ? "Two 5-minute closes above breakout or one 15-minute close, then bullish rejection in today's execution zone." : "Two 5-minute closes below breakdown or one 15-minute close, then bearish rejection in today's execution zone.",
+          stop: longSide ? `Below ${zbFmt(ladder.stop)}` : `Above ${zbFmt(ladder.stop)}`,
+          riskTicks: bestRr.risk ?? "-",
+          target1: zbFmt(firstResistance),
+          target2: zbFmt(secondTarget),
+          rr: bestRr.text,
+          score: entry1Score,
+          confidence: entryConfidence(entry1Score)
+        },
+        {
+          rank: "#2",
+          type: "Continuation Breakout",
+          rawPrice: continuationEntry,
+          price: zbFmt(continuationEntry),
+          why: "Momentum is confirmed, but the entry is farther from the structure stop and has more chase risk.",
+          confirmation: longSide ? `Strong close through ${zbFmt(firstResistance)} with no rejection back into the zone.` : `Strong close through ${zbFmt(firstResistance)} with no rejection back into the zone.`,
+          stop: longSide ? `Below ${zbFmt(continuationStop)}` : `Above ${zbFmt(continuationStop)}`,
+          riskTicks: continuationRr.risk ?? "-",
+          target1: zbFmt(continuationTarget),
+          target2: "Trail after first continuation target",
+          rr: continuationRr.text,
+          score: entry2Score,
+          confidence: entryConfidence(entry2Score, 5)
+        },
+        {
+          rank: "#3",
+          type: "Deeper Pullback",
+          rawPrice: pullbackEntry,
+          price: zbFmt(pullbackEntry),
+          why: "Better price if it holds, but it may never trigger and can become a failed acceptance.",
+          confirmation: longSide ? "Higher low above breakout, then bullish rejection back into the execution zone." : "Lower high below breakdown, then bearish rejection back into the execution zone.",
+          stop: longSide ? `Below ${zbFmt(ladder.stop)}` : `Above ${zbFmt(ladder.stop)}`,
+          riskTicks: pullbackRr.risk ?? "-",
+          target1: zbFmt(firstResistance),
+          target2: zbFmt(secondTarget),
+          rr: pullbackRr.text,
+          score: entry3Score,
+          confidence: entryConfidence(entry3Score, 10)
+        }
+      ].sort((left, right) => right.score - left.score);
+
+      entries.forEach((entry, index) => {
+        entry.rank = `#${index + 1}`;
+      });
+
+      const best = entries[0];
+      const chase = [
+        `Am I chasing? ${extended ? "Yes" : "No"}.`,
+        `Moved more than 8-10 ticks from execution zone? ${extended ? "Yes" : "No"}.`,
+        `Reward still at least 2:1? ${bestRr.ratio >= 2 ? "Yes" : "No"}.`,
+        extended || bestRr.ratio < 2 ? "Do not enter now. Wait for the next institutional retest or a new setup." : "Wait for acceptance and the next institutional retest before entry."
+      ].join(" ");
+
+      return {
+        entries,
+        best: best.score >= 85 ? best : null,
+        chase,
+        scoreText: `#1 score ${best.score}/100. Weights: higher-timeframe ${htfOk ? 25 : 0}/25, acceptance ${acceptanceKnown ? 20 : 0}/20, retest ${retestKnown ? 20 : 0}/20, risk/reward ${bestRr.ratio >= 2 ? 15 : 0}/15, structure 10/10, news ${newsOk ? 10 : 0}/10. Only 85+ can be recommended as Best Entry.`
+      };
+    }
+
     function applyZbInstitutionalPlan(snapshot, context) {
       const auto = context.automation || {};
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
       const ladder = executionLadder(context);
+      const candidates = zbEntryCandidates(snapshot, context);
       const htf = zbInstitutionalBias(context);
       const fundamentals = zbFundamentalContext(snapshot, context);
       const hasBreakout = Number.isFinite(Number(ladder.breakout)) && direction !== "No Trade";
@@ -1692,10 +1877,16 @@
       setText("zb-fundamental-why", fundamentals.why);
       setText("zb-static-levels", zbStaticLevels(context));
       setText("zb-dynamic-levels", zbDynamicLevels(context));
+      setText("zb-ranked-entries", candidates.entries.length ? candidates.entries.map(entryLine).join(" | ") : "No ranked entries until the page has a fresh valid ZB direction.");
+      setText("zb-chase-filter", candidates.chase);
+      setText("zb-optimal-entry-score", candidates.scoreText);
+      setText("zb-one-trade-entry", candidates.best
+        ? `If I can only take one trade today: ${candidates.best.type} at ${candidates.best.price}, after confirmation.`
+        : "If I can only take one trade today: No entry yet. Wait for an 85+ scored acceptance retest.");
 
       const primary = direction === "No Trade"
         ? "Primary: No Trade until fresh data, institutional gate alignment, and 5-minute or 15-minute acceptance are confirmed."
-        : `Primary: ${direction}. Breakout ${zbFmt(ladder.breakout)}; acceptance required; execute ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)} only after the retest and confirmation candle. Stop ${zbFmt(ladder.stop)}. Target 1 ${zbFmt(ladder.scale1)}. Target 2 / runner ${zbFmt(ladder.scale2)}. Probability follows gate score, but no entry without live acceptance.`;
+        : `Primary: ${direction}. Breakout ${zbFmt(ladder.breakout)}; acceptance required; today's computed execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)} only after the retest and confirmation candle. Stop ${zbFmt(ladder.stop)}. Target 1 ${zbFmt(ladder.scale1)}. Target 2 / runner ${zbFmt(ladder.scale2)}. Probability follows gate score, but no entry without live acceptance.`;
       setText("zb-primary-plan", primary);
       setText("zb-alt-bull", `Bullish only if ZB reclaims ${zbFmt((context.automation || {}).trend_pro_240_bullish_level || context.opening_range_high || context.overnight_high)}, accepts above it, retests, and rejects lower prices.`);
       setText("zb-alt-bear", `Bearish only if ZB loses ${zbFmt((context.automation || {}).trend_pro_240_bearish_level || context.opening_range_low || context.overnight_low)}, accepts below it, retests, and rejects higher prices.`);
