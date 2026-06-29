@@ -55,10 +55,11 @@ The public static dashboard is available at:
 https://lavender333.github.io/tradedashboard/
 ```
 
-The professional ES/ZB daily trading template is available at:
+The professional ES and ZB daily trading templates are available at:
 
 ```text
-https://lavender333.github.io/tradedashboard/trading-template.html
+https://lavender333.github.io/tradedashboard/trading-template-es.html
+https://lavender333.github.io/tradedashboard/trading-template-zb.html
 ```
 
 The ES/ZB template auto-fills the measurable market context from delayed public data:
@@ -70,9 +71,12 @@ The ES/ZB template auto-fills the measurable market context from delayed public 
 - Previous day high/low
 - Opening range and overnight high/low
 - ATR, VIX, and Treasury-yield direction
+- Economic calendar highlights from the live Nasdaq Economic Calendar feed, with `data/economic-calendar.json` as a fallback
+- Overnight / Europe context using overnight range, pre-open direction, inventory, and open confirmation signals
+- Instrument-specific ES/ZB master pattern analysis for market state, highest-probability setup, liquidity pattern, news behavior, time window, and intermarket read
 - Macro result, Trend Pro proxy, VWAP state, today’s bias, direction, structure score, volatility score, trade-plan score, and the objective gate checks
 
-Manual confirmation is still required for economic news, custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
+Manual confirmation is still required for custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
 
 GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
 

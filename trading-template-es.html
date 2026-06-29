@@ -506,16 +506,16 @@
     }
   </style>
 </head>
-<body>
+<body data-instrument="ES">
   <main class="page">
     <div class="topbar">
       <div>
-        <h1>Professional ES & ZB Daily Trading Template</h1>
+        <h1>Professional ES Daily Trading Template</h1>
         <div class="subtitle">v1.0 - Macro, trend, structure, order flow, volatility, and trade plan.</div>
       </div>
       <div class="nav">
         <a class="button" href="index.html">Live Levels</a>
-        <a class="button" href="trading-template-es.html">ES Page</a>
+        <a class="button button-primary" href="trading-template-es.html">ES Page</a>
         <a class="button" href="trading-template-zb.html">ZB Page</a>
         <button class="button" id="refresh-auto-btn" type="button">Refresh Auto Data</button>
         <button class="button" id="reset-btn" type="button">Reset</button>
@@ -526,12 +526,8 @@
     <section class="summary">
       <div class="metric">
         <div class="metric-label">Instrument</div>
-        <select id="instrument">
-          <option>ES</option>
-          <option>ZB</option>
-          <option>ES + ZB</option>
-        </select>
-        <div class="metric-note">Use one worksheet per trade idea.</div>
+        <div class="metric-value">ES</div>
+        <div class="metric-note">Equity-index futures worksheet.</div>
       </div>
       <div class="metric">
         <div class="metric-label">Total Score</div>
@@ -1035,6 +1031,7 @@
   <script>
     const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
+    const storageKey = "trading-template-v1-" + selectedInstrumentKey().toLowerCase();
 
     function clampScore(input) {
       const max = Number(input.max || 100);
@@ -1580,7 +1577,9 @@
     }
 
     function selectedInstrumentKey() {
-      const value = document.getElementById("instrument").value;
+      const forced = document.body.dataset.instrument;
+      if (forced === "ES" || forced === "ZB") return forced;
+      const value = document.getElementById("instrument")?.value || "ES";
       return value === "ZB" ? "ZB" : "ES";
     }
 
@@ -1787,11 +1786,11 @@
         value: control.value,
         checked: control.checked
       }));
-      localStorage.setItem("trading-template-v1", JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
     function restoreState() {
-      const raw = localStorage.getItem("trading-template-v1");
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return;
       const state = JSON.parse(raw);
       formControls().forEach((control, index) => {
@@ -1811,7 +1810,7 @@
     });
 
     document.getElementById("reset-btn").addEventListener("click", () => {
-      localStorage.removeItem("trading-template-v1");
+      localStorage.removeItem(storageKey);
       formControls().forEach((control) => {
         if (control.type === "checkbox" || control.type === "radio") {
           control.checked = false;
@@ -1826,7 +1825,7 @@
     });
 
     document.getElementById("refresh-auto-btn").addEventListener("click", loadAutomation);
-    document.getElementById("instrument").addEventListener("change", () => {
+    document.getElementById("instrument")?.addEventListener("change", () => {
       if (window.templateSnapshot) applyTemplateSnapshot(window.templateSnapshot);
     });
 

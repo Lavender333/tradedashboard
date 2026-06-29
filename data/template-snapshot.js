@@ -1,4 +1,4 @@
-{
+window.templateSnapshotFallback = {
   "economic_calendar": [],
   "generated_at": "2026-06-28 05:01 UTC",
   "instruments": {
@@ -193,4 +193,4 @@
       "symbol": "^TYX"
     }
   }
-}
+};
