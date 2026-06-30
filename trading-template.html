@@ -1145,6 +1145,19 @@
       return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
     }
 
+    function generatedLabel(snapshot) {
+      const generated = snapshot?.generated_at || "-";
+      const eastern = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }).format(snapshotDate(snapshot));
+      return `Generated ${eastern} ET (${generated})`;
+    }
+
     function eventDateKey(event) {
       if (event.date) return event.date;
       const raw = event.datetime || event.starts_at || event.release_at;
@@ -1624,7 +1637,7 @@
         ? `${snapshot.provider || "Automated"} · stale`
         : snapshot.provider || "Automated";
       document.getElementById("auto-status").textContent = statusText;
-      document.getElementById("auto-generated").textContent = "Generated " + snapshot.generated_at;
+      document.getElementById("auto-generated").textContent = generatedLabel(snapshot);
       document.getElementById("auto-es").textContent =
         `ES ${fmt(snapshot.instruments.ES.last)} · ${snapshot.instruments.ES.trend.result}`;
       document.getElementById("auto-es-note").textContent =
