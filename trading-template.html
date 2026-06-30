@@ -1719,9 +1719,16 @@
       updateScores();
     }
 
+    const hostedDataBase = "https://lavender333.github.io/tradedashboard/";
+
+    function dataUrl(path) {
+      const base = window.location.protocol === "file:" ? hostedDataBase : "";
+      return `${base}${path}?v=${Date.now()}`;
+    }
+
     async function loadEconomicCalendar() {
       try {
-        const response = await fetch("data/economic-calendar.json?v=" + Date.now(), { cache: "no-store" });
+        const response = await fetch(dataUrl("data/economic-calendar.json"), { cache: "no-store" });
         if (!response.ok) return [];
         const payload = await response.json();
         return Array.isArray(payload) ? payload : payload.events || [];
@@ -1732,8 +1739,10 @@
 
     async function loadAutomation() {
       try {
+        document.getElementById("auto-status").textContent = "Refreshing...";
+        document.getElementById("auto-generated").textContent = "Requesting latest market snapshot.";
         const [response, economicCalendar] = await Promise.all([
-          fetch("data/template-snapshot.json?v=" + Date.now(), { cache: "no-store" }),
+          fetch(dataUrl("data/template-snapshot.json"), { cache: "no-store" }),
           loadEconomicCalendar()
         ]);
         if (!response.ok) throw new Error("Snapshot unavailable");
@@ -1749,7 +1758,7 @@
           window.templateSnapshot = fallback;
           applyTemplateSnapshot(fallback);
           document.getElementById("auto-generated").textContent =
-            "Using bundled snapshot because local JSON refresh was blocked.";
+            "Hosted refresh unavailable; using bundled snapshot.";
         } else {
           document.getElementById("auto-status").textContent = "Unavailable";
           document.getElementById("auto-generated").textContent = error.message;
