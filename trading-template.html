@@ -954,12 +954,13 @@
             </div>
             <div class="field-group">
               <div class="group-title">Entry Type</div>
-              <div class="checks">
-                <label><input type="checkbox" data-auto="entry-pullback"> Pullback</label>
-                <label><input type="checkbox" data-auto="entry-breakout"> Breakout</label>
-                <label><input type="checkbox" data-auto="entry-reversal"> Reversal</label>
-                <label><input type="checkbox" data-auto="entry-fade"> Fade</label>
+              <div style="display: none;">
+                <input type="checkbox" data-auto="entry-pullback">
+                <input type="checkbox" data-auto="entry-breakout">
+                <input type="checkbox" data-auto="entry-reversal">
+                <input type="checkbox" data-auto="entry-fade">
               </div>
+              <div class="auto-decision-readout" data-readout="entry-type">Auto: -</div>
             </div>
             <div class="field-group">
               <div class="group-title">Trade Levels</div>
@@ -1018,12 +1019,21 @@
 
         <div class="gate">
           <div class="section-title">Institutional Alignment Gate</div>
-          <div class="checks">
-            <label><input type="checkbox" class="gate-check" data-gate="macro"> Macro bias agrees with the trade</label>
-            <label><input type="checkbox" class="gate-check" data-gate="htf"> Higher-timeframe trend agrees</label>
-            <label><input type="checkbox" class="gate-check" data-gate="trend-pro"> Trend Pro agrees</label>
-            <label><input type="checkbox" class="gate-check" data-gate="order-flow"> Order flow confirms</label>
-            <label><input type="checkbox" class="gate-check" data-gate="risk-reward"> Risk-to-reward is at least 2:1</label>
+          <div style="display: none;">
+            <input type="checkbox" class="gate-check" data-gate="macro" data-label="Macro bias">
+            <input type="checkbox" class="gate-check" data-gate="htf" data-label="Higher-timeframe trend">
+            <input type="checkbox" class="gate-check" data-gate="trend-pro" data-label="Trend Pro">
+            <input type="checkbox" class="gate-check" data-gate="order-flow" data-label="Order flow">
+            <input type="checkbox" class="gate-check" data-gate="risk-reward" data-label="Risk-to-reward">
+          </div>
+          <div class="context-readout">
+            <div class="context-grid">
+              <div class="context-item"><div class="context-label">Macro</div><div class="context-value" id="gate-macro-readout">-</div></div>
+              <div class="context-item"><div class="context-label">Higher Timeframe</div><div class="context-value" id="gate-htf-readout">-</div></div>
+              <div class="context-item"><div class="context-label">Trend Pro</div><div class="context-value" id="gate-trend-pro-readout">-</div></div>
+              <div class="context-item"><div class="context-label">Order Flow</div><div class="context-value" id="gate-order-flow-readout">-</div></div>
+              <div class="context-item"><div class="context-label">Risk/Reward</div><div class="context-value" id="gate-risk-reward-readout">-</div></div>
+            </div>
           </div>
           <div class="gate-status bad" id="gate-box">Fail: default action is No Trade.</div>
         </div>
@@ -1080,7 +1090,7 @@
     function gateFailureReasons(checks) {
       return checks
         .filter((check) => !check.checked)
-        .map((check) => check.closest("label")?.textContent.trim() || "Required confirmation")
+        .map((check) => check.dataset.label || check.closest("label")?.textContent.trim() || "Required confirmation")
         .slice(0, 3);
     }
 
@@ -1265,6 +1275,7 @@
       setAutoChecked("entry-breakout", type === "Breakout" || type === "Breakdown");
       setAutoChecked("entry-reversal", type === "Reversal");
       setAutoChecked("entry-fade", type === "Fade");
+      setReadout("entry-type", type || "No Trade");
     }
 
     function timeWindowLabel(snapshot, instrumentKey) {
@@ -1541,6 +1552,7 @@
         control.checked = Boolean(value);
         updateComputedChoice(control);
       }
+      setText(`gate-${name}-readout`, value ? "Pass" : "Fail");
     }
 
     function updateAutomatedGateChecks() {
