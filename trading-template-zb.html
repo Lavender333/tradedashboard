@@ -1688,7 +1688,7 @@
         : auto.direction === "Long Only"
           ? "Invalid if a completed 5-minute candle loses the breakout level, VWAP fails, or high-impact news reverses yields higher."
           : "Invalid because there is no accepted institutional direction.";
-      return `${side} setup. Today's computed breakout level ${zbFmt(ladder.breakout)}. Today's computed execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}. Acceptance: ${ladder.acceptance} Confirmation: ${ladder.confirmation} Retest: ${ladder.trigger} Stop: ${zbFmt(ladder.stop)}. Scale-in: second contract only after a successful retest, bull/bear flag, higher low/lower high, or acceptance above/below the next level. Scale-out: ${ladder.scale} ${invalidation}`;
+      return `${side} setup. Today's computed breakout level ${ladder.breakoutDisplay || zbFmt(ladder.breakout)}. Today's computed execution zone ${ladder.zoneDisplay || `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`}. Acceptance: ${ladder.acceptance} Confirmation: ${ladder.confirmation} Retest: ${ladder.trigger} Stop: ${ladder.stopDisplay || zbFmt(ladder.stop)}. Scale-in: second contract only after a successful retest, bull/bear flag, higher low/lower high, or acceptance above/below the next level. Scale-out: ${ladder.scale} ${invalidation}`;
     }
 
     function entryNearLowerEdgeForTwoToOne(context) {
@@ -2028,31 +2028,38 @@
           scale: `Scale 1 at ${zbFmt(scale1)} (+5 ticks). Scale 2 near ${zbFmt(scale2)} or trail over lower highs.`
         };
       }
+      const longZoneLow = bullishBreakout + tick;
+      const longZoneHigh = bullishBreakout + (3 * tick);
+      const shortZoneHigh = bearishBreakout - tick;
+      const shortZoneLow = bearishBreakout - (3 * tick);
       return {
-        breakout: null,
-        zoneLow: null,
-        zoneHigh: null,
-        stop: null,
-        scale1: null,
-        scale2: null,
-        trigger: "No execution ladder until direction, fresh data, and gate alignment agree.",
-        acceptance: "No Trade if neither 5-minute nor 15-minute acceptance is present.",
-        confirmation: "Wait for acceptance, retest, and rejection candle.",
-        scale: "No scale-out targets without an accepted setup."
+        breakout: bullishBreakout,
+        zoneLow: longZoneLow,
+        zoneHigh: longZoneHigh,
+        stop: bullishBreakout,
+        scale1: longZoneLow + (5 * tick),
+        scale2: longZoneLow + (7 * tick),
+        breakoutDisplay: `Upside ${zbFmt(bullishBreakout)} / Downside ${zbFmt(bearishBreakout)}`,
+        zoneDisplay: `Long ${zbFmt(longZoneLow)} - ${zbFmt(longZoneHigh)} / Short ${zbFmt(shortZoneLow)} - ${zbFmt(shortZoneHigh)}`,
+        stopDisplay: `Long below ${zbFmt(bullishBreakout)} / Short above ${zbFmt(bearishBreakout)}`,
+        trigger: "No approved trade yet. Levels are computed locally; wait for fresh data, direction, and gate alignment before entry.",
+        acceptance: "Long requires two 5-minute closes above upside breakout or one 15-minute close. Short requires two 5-minute closes below downside breakdown or one 15-minute close.",
+        confirmation: "Wait for accepted side, retest, and rejection/continuation candle before choosing long or short.",
+        scale: "Scale-out targets activate only after one side is accepted and confirmed."
       };
     }
 
     function applyExecutionLadder(context) {
       const ladder = executionLadder(context);
       setText("execution-trigger", `Auto: ${ladder.trigger}`);
-      setText("execution-breakout", zbFmt(ladder.breakout));
+      setText("execution-breakout", ladder.breakoutDisplay || zbFmt(ladder.breakout));
       setText("execution-acceptance", ladder.acceptance);
-      setText("execution-zone", `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`);
+      setText("execution-zone", ladder.zoneDisplay || `${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}`);
       setText("execution-confirmation", ladder.confirmation);
-      setText("execution-stop", zbFmt(ladder.stop));
+      setText("execution-stop", ladder.stopDisplay || zbFmt(ladder.stop));
       setText("execution-scale", ladder.scale);
       setAutoValue("trade-entry", ladder.trigger);
-      setAutoValue("trade-stop", zbFmt(ladder.stop));
+      setAutoValue("trade-stop", ladder.stopDisplay || zbFmt(ladder.stop));
       setAutoValue("trade-target-1", zbFmt(ladder.scale1));
       setAutoValue("trade-target-2", ladder.scale);
     }
