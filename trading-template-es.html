@@ -1061,8 +1061,8 @@
             <input type="checkbox" class="gate-check" data-gate="macro" data-label="Macro bias">
             <input type="checkbox" class="gate-check" data-gate="htf" data-label="Higher-timeframe trend">
             <input type="checkbox" class="gate-check" data-gate="trend-pro" data-label="Trend Pro">
-            <input type="checkbox" class="gate-check" data-gate="order-flow" data-label="Order flow">
-            <input type="checkbox" class="gate-check" data-gate="risk-reward" data-label="Risk-to-reward">
+            <input type="checkbox" class="gate-check" data-gate="order-flow" data-label="Trade confirmation">
+            <input type="checkbox" class="gate-check" data-gate="risk-reward" data-label="2:1 reward/risk">
           </div>
           <div class="context-readout">
             <div class="context-grid">
@@ -1719,31 +1719,35 @@
       return document.querySelector(`[data-gate="${name}"]`);
     }
 
-    function setGate(name, value) {
+    function setGate(name, value, label) {
       const control = gateControl(name);
       if (control) {
         control.checked = Boolean(value);
         updateComputedChoice(control);
       }
-      setText(`gate-${name}-readout`, value ? "Pass" : "Fail");
+      setText(`gate-${name}-readout`, label || (value ? "Pass" : "Fail"));
     }
 
     function updateAutomatedGateChecks() {
       const snapshot = window.templateSnapshot;
       const context = snapshot?.instruments?.[selectedInstrumentKey()];
       const direction = selectedDirection();
+      const noApprovedDirection = !direction || direction === "No Trade" || direction === "Both";
       if (snapshot?.rate_context) {
-        setGate("macro", directionAgrees(direction, snapshot.rate_context.result));
+        const agrees = directionAgrees(direction, snapshot.rate_context.result);
+        setGate("macro", noApprovedDirection ? true : agrees, noApprovedDirection ? snapshot.rate_context.result : undefined);
       }
       if (context?.higher_timeframe_trend) {
-        setGate("htf", directionAgrees(direction, context.higher_timeframe_trend));
+        const agrees = directionAgrees(direction, context.higher_timeframe_trend);
+        setGate("htf", noApprovedDirection ? true : agrees, noApprovedDirection ? context.higher_timeframe_trend : undefined);
       }
       const trendPro = selectedTrendPro();
       if (trendPro) {
-        setGate("trend-pro", directionAgrees(direction, trendPro));
+        const agrees = directionAgrees(direction, trendPro);
+        setGate("trend-pro", noApprovedDirection ? true : agrees, noApprovedDirection ? trendPro : undefined);
       }
-      setGate("order-flow", directionAgrees(direction, selectedRadioText("order-flow")));
-      setGate("risk-reward", riskRewardPass(direction));
+      setGate("order-flow", !noApprovedDirection && directionAgrees(direction, selectedRadioText("order-flow")), noApprovedDirection ? "Waiting for confirmation" : undefined);
+      setGate("risk-reward", !noApprovedDirection && riskRewardPass(direction), noApprovedDirection ? "Waiting for setup" : undefined);
     }
 
     function autoControl(name) {
