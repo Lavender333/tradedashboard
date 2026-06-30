@@ -1,4 +1,38 @@
 {
+  "data_sources": {
+    "active": [
+      "Yahoo Finance delayed futures candles",
+      "Yahoo Finance Treasury yield indexes",
+      "Nasdaq Economic Calendar with official-source tagging"
+    ],
+    "catalog": {
+      "economic_calendar": {
+        "events": 1,
+        "label": "Nasdaq Economic Calendar with official-source tagging",
+        "primary_sources": [
+          "Federal Reserve"
+        ],
+        "role": "scheduled reports, actual/consensus/previous when available",
+        "status": "dynamic"
+      },
+      "futures_prices": {
+        "label": "Yahoo Finance delayed futures candles",
+        "role": "ES/ZB OHLC, overnight levels, moving averages, VWAP proxy",
+        "status": "dynamic"
+      },
+      "official_macro_sources": {
+        "label": "BLS / BEA / ISM / Conference Board / Treasury / Federal Reserve",
+        "role": "primary source labels for macro events",
+        "status": "mapped"
+      },
+      "rates": {
+        "label": "Yahoo Finance Treasury yield indexes",
+        "role": "2Y/10Y/30Y yield direction",
+        "status": "dynamic"
+      }
+    },
+    "summary": "Dynamic sources: futures/rates from Yahoo delayed feeds; macro calendar from Nasdaq; events tagged to official primary sources when recognized."
+  },
   "economic_calendar": [
     {
       "category": "fed",
@@ -6,16 +40,18 @@
       "date": "2026-06-30",
       "impact": "medium",
       "note": "Previous 0.4 \u00b7 Actual 0.0",
+      "primary_source": "Federal Reserve",
       "source": "Nasdaq Economic Calendar",
+      "source_url": "https://www.federalreserve.gov/",
       "time_et": "6:30 AM",
       "title": "Dallas Fed Mfg Business Index"
     }
   ],
-  "generated_at": "2026-06-30 14:34 UTC",
+  "generated_at": "2026-06-30 14:58 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 9.66,
-      "atr_daily": 111.04,
+      "atr_15m": 10.64,
+      "atr_daily": 111.68,
       "automation": {
         "delta_result": "Mixed",
         "direction": "No Trade",
@@ -31,20 +67,20 @@
         "todays_bias": "Neutral",
         "trade_plan_score": 0,
         "trend_pro_240_bearish_level": 7491.5,
-        "trend_pro_240_bullish_level": 7516.42,
+        "trend_pro_240_bullish_level": 7520.61,
         "trend_pro_daily_bearish_level": 7398.0,
-        "trend_pro_daily_bullish_level": 7530.5,
+        "trend_pro_daily_bullish_level": 7527.5,
         "trend_pro_result": "Bullish",
         "trend_pro_score": 15,
         "volatility_score": 4,
-        "vwap": 7516.42,
+        "vwap": 7520.61,
         "vwap_position": "Above"
       },
       "data_status": "fresh",
       "higher_timeframe_trend": "Bullish",
-      "last": 7530.5,
-      "last_candle_age_minutes": 10,
-      "last_time": "2026-06-30 14:24 UTC",
+      "last": 7527.5,
+      "last_candle_age_minutes": 9,
+      "last_time": "2026-06-30 14:48 UTC",
       "monthly_high": 7611.5,
       "monthly_low": 7199.5,
       "monthly_trend": {
@@ -52,11 +88,11 @@
         "score": 6
       },
       "moving_averages": {
-        "ma100": 7099.14,
-        "ma20": 7469.56,
-        "ma200": 6961.33,
-        "ma50": 7405.1,
-        "ma72": 7196.93
+        "ma100": 7099.11,
+        "ma20": 7469.38,
+        "ma200": 6961.32,
+        "ma50": 7405.03,
+        "ma72": 7196.89
       },
       "name": "ES",
       "opening_range_high": 7528.0,
@@ -92,7 +128,7 @@
       }
     },
     "ZB": {
-      "atr_15m": 0.1,
+      "atr_15m": 0.09,
       "atr_daily": 0.79,
       "automation": {
         "delta_result": "Mixed",
@@ -122,7 +158,7 @@
       "higher_timeframe_trend": "Bullish",
       "last": 113.84,
       "last_candle_age_minutes": 10,
-      "last_time": "2026-06-30 14:24 UTC",
+      "last_time": "2026-06-30 14:48 UTC",
       "monthly_high": 114.12,
       "monthly_low": 109.5,
       "monthly_trend": {
@@ -170,7 +206,7 @@
       }
     }
   },
-  "provider": "Yahoo Finance delayed",
+  "provider": "Dynamic delayed market data",
   "rate_context": {
     "result": "Bearish",
     "score": 1
@@ -182,7 +218,7 @@
   },
   "volatility": {
     "move": null,
-    "vix": 17.23
+    "vix": 17.07
   },
   "yields": {
     "10y": {

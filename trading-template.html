@@ -1206,7 +1206,8 @@
       }
       readout.innerHTML = todaysEvents.map((event) => {
         const kind = eventKind(event);
-        const meta = event.note || event.source || event.category || "";
+        const source = event.primary_source || event.source || event.category || "";
+        const meta = [source, event.note].filter(Boolean).join(" · ");
         const time = eventTime(event);
         const timeLabel = /\bET\b/i.test(time) ? time : `${time} ET`;
         return `
@@ -1633,9 +1634,10 @@
       const context = snapshot.instruments[key];
       const vix = snapshot.volatility?.vix;
       const move = snapshot.volatility?.move;
+      const providerText = snapshot.data_sources?.summary || snapshot.provider || "Automated";
       const statusText = context.data_status === "stale"
-        ? `${snapshot.provider || "Automated"} · stale`
-        : snapshot.provider || "Automated";
+        ? `${providerText} · stale`
+        : providerText;
       document.getElementById("auto-status").textContent = statusText;
       document.getElementById("auto-generated").textContent = generatedLabel(snapshot);
       document.getElementById("auto-es").textContent =

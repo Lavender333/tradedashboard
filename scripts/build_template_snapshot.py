@@ -24,6 +24,38 @@ NASDAQ_HEADERS = {
     "Referer": "https://www.nasdaq.com/market-activity/economic-calendar",
 }
 
+SOURCE_CATALOG = {
+    "futures_prices": {
+        "label": "Yahoo Finance delayed futures candles",
+        "role": "ES/ZB OHLC, overnight levels, moving averages, VWAP proxy",
+        "status": "dynamic",
+    },
+    "rates": {
+        "label": "Yahoo Finance Treasury yield indexes",
+        "role": "2Y/10Y/30Y yield direction",
+        "status": "dynamic",
+    },
+    "economic_calendar": {
+        "label": "Nasdaq Economic Calendar with official-source tagging",
+        "role": "scheduled reports, actual/consensus/previous when available",
+        "status": "dynamic",
+    },
+    "official_macro_sources": {
+        "label": "BLS / BEA / ISM / Conference Board / Treasury / Federal Reserve",
+        "role": "primary source labels for macro events",
+        "status": "mapped",
+    },
+}
+
+OFFICIAL_EVENT_SOURCES = [
+    (re.compile(r"\b(jolts|job openings|payroll|nonfarm|nfp|unemployment|cpi|ppi|claims)\b", re.I), "BLS", "https://www.bls.gov/"),
+    (re.compile(r"\b(pce|personal income|personal spending|gdp|trade balance)\b", re.I), "BEA", "https://www.bea.gov/"),
+    (re.compile(r"\b(ism|manufacturing pmi|services pmi|chicago pmi|business barometer)\b", re.I), "ISM / Chicago Business Barometer", "https://www.ismworld.org/"),
+    (re.compile(r"\b(consumer confidence|leading economic index|lei)\b", re.I), "The Conference Board", "https://www.conference-board.org/"),
+    (re.compile(r"\b(treasury auction|auction)\b", re.I), "U.S. Treasury", "https://home.treasury.gov/"),
+    (re.compile(r"\b(fed|fomc|powell|beige book)\b", re.I), "Federal Reserve", "https://www.federalreserve.gov/"),
+]
+
 
 def get_json(url: str, params=None, headers=None, timeout: int = 30) -> Dict:
     query = f"?{urlencode(params)}" if params else ""
@@ -494,6 +526,29 @@ def macro_rate_score(yields: Dict[str, Dict]) -> Dict:
     return {"result": result, "score": score}
 
 
+def source_status(events: List[Dict]) -> Dict:
+    calendar_primary_sources = sorted({
+        event.get("primary_source")
+        for event in events
+        if event.get("primary_source") and event.get("primary_source") != "Economic calendar provider"
+    })
+    catalog = {key: value.copy() for key, value in SOURCE_CATALOG.items()}
+    catalog["economic_calendar"]["events"] = len(events)
+    catalog["economic_calendar"]["primary_sources"] = calendar_primary_sources
+    return {
+        "active": [
+            catalog["futures_prices"]["label"],
+            catalog["rates"]["label"],
+            catalog["economic_calendar"]["label"],
+        ],
+        "catalog": catalog,
+        "summary": (
+            "Dynamic sources: futures/rates from Yahoo delayed feeds; macro calendar from Nasdaq; "
+            "events tagged to official primary sources when recognized."
+        ),
+    }
+
+
 def clean_calendar_text(value) -> str:
     text = unescape(str(value or "")).replace("\xa0", " ")
     return re.sub(r"\s+", " ", text).strip()
@@ -510,6 +565,13 @@ def classify_calendar_event(title: str) -> str:
     if re.search(r"\b(cpi|ppi|pce|nfp|nonfarm|payroll|gdp)\b", text) or "retail sales" in text:
         return "high-impact"
     return "other"
+
+
+def official_source_for_event(title: str) -> Dict[str, str]:
+    for pattern, name, url in OFFICIAL_EVENT_SOURCES:
+        if pattern.search(title):
+            return {"name": name, "url": url}
+    return {"name": "Economic calendar provider", "url": ""}
 
 
 def calendar_time_et(calendar_date: datetime, gmt_time: str) -> str:
@@ -551,6 +613,7 @@ def fetch_live_economic_calendar() -> List[Dict]:
             meta_parts.append(f"Previous {previous}")
         if actual:
             meta_parts.append(f"Actual {actual}")
+        official_source = official_source_for_event(title)
         events.append({
             "date": calendar_date.strftime("%Y-%m-%d"),
             "time_et": calendar_time_et(calendar_date, row.get("gmt")),
@@ -559,6 +622,8 @@ def fetch_live_economic_calendar() -> List[Dict]:
             "category": kind,
             "impact": "high" if kind == "high-impact" else "medium",
             "source": "Nasdaq Economic Calendar",
+            "primary_source": official_source["name"],
+            "source_url": official_source["url"],
             "note": " · ".join(meta_parts),
         })
     return events
@@ -575,8 +640,15 @@ def load_economic_calendar() -> List[Dict]:
         return []
     payload = json.loads(ECONOMIC_CALENDAR.read_text(encoding="utf-8"))
     if isinstance(payload, list):
-        return payload
-    return payload.get("events", [])
+        events = payload
+    else:
+        events = payload.get("events", [])
+    for event in events:
+        if not event.get("primary_source"):
+            official_source = official_source_for_event(event.get("title") or event.get("name") or "")
+            event["primary_source"] = official_source["name"]
+            event["source_url"] = official_source["url"]
+    return events
 
 
 def safe_build() -> Dict:
@@ -593,16 +665,18 @@ def safe_build() -> Dict:
             "vix": quote_last("^VIX"),
             "move": None,
         }
+        economic_calendar = load_economic_calendar()
         instruments = {
             "ES": instrument_snapshot("ES", "ES=F", rate_context["result"], generated_at_dt, volatility["vix"]),
             "ZB": instrument_snapshot("ZB", "ZB=F", rate_context["result"], generated_at_dt, volatility["vix"]),
         }
         return {
             "generated_at": generated_at,
-            "provider": "Yahoo Finance delayed",
+            "provider": "Dynamic delayed market data",
+            "data_sources": source_status(economic_calendar),
             "yields": yields,
             "rate_context": rate_context,
-            "economic_calendar": load_economic_calendar(),
+            "economic_calendar": economic_calendar,
             "instruments": instruments,
             "volatility": volatility,
             "suggested_scores": {
