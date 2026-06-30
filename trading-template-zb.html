@@ -1730,26 +1730,65 @@
     }
 
     function entryLine(entry) {
-      return `${entry.rank} ${entry.type}: Entry ${entry.price}; Why: ${entry.why}; Confirmation: ${entry.confirmation}; Stop ${entry.stop}; Risk ${entry.riskTicks} ticks; Target 1 ${entry.target1}; Target 2 ${entry.target2}; R:R ${entry.rr}; Confidence ${entry.confidence}%.`;
+      return `${entry.rank} ${entry.type}: Entry ${entry.price}; Why: ${entry.why}; Confirmation: ${entry.confirmation}; Stop ${entry.stop}; Risk ${entry.riskTicks} ticks; Target 1 ${entry.target1}; Target 2 ${entry.target2}; R:R ${entry.rr}; Score ${entry.score}/100; Confidence ${entry.confidence}%.`;
+    }
+
+    function candidateFromSide(snapshot, context, direction, rank, rankPenalty = 0) {
+      const auto = context.automation || {};
+      const tick = 1 / 32;
+      const htfOk = directionAgrees(direction, context.higher_timeframe_trend);
+      const newsOk = macroResultFromNews(snapshot).score >= 4 && context.data_status !== "stale";
+      const bullishBreakout = auto.trend_pro_240_bullish_level || context.opening_range_high || context.overnight_high;
+      const bearishBreakout = auto.trend_pro_240_bearish_level || context.opening_range_low || context.overnight_low;
+      const longSide = direction === "Long Only";
+      const breakout = longSide ? bullishBreakout : bearishBreakout;
+      if (!Number.isFinite(Number(breakout))) return null;
+      const zoneLow = longSide ? breakout + tick : breakout - (3 * tick);
+      const zoneHigh = longSide ? breakout + (3 * tick) : breakout - tick;
+      const stop = breakout;
+      const scale1 = longSide ? zoneLow + (5 * tick) : zoneHigh - (5 * tick);
+      const scale2 = longSide
+        ? Math.max(context.overnight_high || scale1, scale1 + (2 * tick))
+        : Math.min(context.overnight_low || scale1, scale1 - (2 * tick));
+      const bestEntry = longSide ? zoneLow : zoneHigh;
+      const firstTarget = scale1;
+      const bestRr = rrText(bestEntry, stop, firstTarget);
+      const score = entryScore({
+        htf: htfOk,
+        acceptance: false,
+        retest: false,
+        rr: bestRr.ratio >= 2,
+        structure: true,
+        news: newsOk
+      });
+      return {
+        rank,
+        type: longSide ? "Long Acceptance Retest" : "Short Acceptance Retest",
+        rawPrice: bestEntry,
+        price: `${zbFmt(zoneLow)} - ${zbFmt(zoneHigh)}`,
+        why: longSide
+          ? "Upside watchlist entry if buyers accept above today's computed breakout level."
+          : "Downside watchlist entry if sellers accept below today's computed breakdown level.",
+        confirmation: longSide
+          ? "Two 5-minute closes above upside breakout or one 15-minute close, then bullish rejection in the long execution zone."
+          : "Two 5-minute closes below downside breakdown or one 15-minute close, then bearish rejection in the short execution zone.",
+        stop: longSide ? `Below ${zbFmt(stop)}` : `Above ${zbFmt(stop)}`,
+        riskTicks: bestRr.risk ?? "-",
+        target1: zbFmt(firstTarget),
+        target2: zbFmt(scale2),
+        rr: bestRr.text,
+        score,
+        confidence: entryConfidence(score, rankPenalty),
+        direction
+      };
     }
 
     function zbEntryCandidates(snapshot, context) {
       const auto = context.automation || {};
       const direction = context.data_status === "stale" ? "No Trade" : auto.direction || "No Trade";
+      const approvedDirection = direction === "Long Only" || direction === "Short Only" ? direction : null;
       const ladder = executionLadder(context);
-      const htfOk = directionAgrees(direction, context.higher_timeframe_trend);
-      const newsOk = macroResultFromNews(snapshot).score >= 4 && context.data_status !== "stale";
-      const hasTrade = direction === "Long Only" || direction === "Short Only";
-      if (!hasTrade || !Number.isFinite(Number(ladder.breakout))) {
-        return {
-          entries: [],
-          chase: "Do not enter now. Wait for a fresh institutional setup.",
-          best: null,
-          scoreText: "No score because no valid ZB direction is active."
-        };
-      }
-
-      const longSide = direction === "Long Only";
+      const longSide = approvedDirection !== "Short Only";
       const bestEntry = longSide ? ladder.zoneLow : ladder.zoneHigh;
       const continuationEntry = longSide ? ladder.scale1 : ladder.scale1;
       const pullbackEntry = longSide ? ladder.zoneLow : ladder.zoneHigh;
@@ -1764,6 +1803,30 @@
       const pullbackRr = rrText(pullbackEntry, ladder.stop, firstResistance);
       const acceptanceKnown = false;
       const retestKnown = false;
+      const htfOk = approvedDirection ? directionAgrees(approvedDirection, context.higher_timeframe_trend) : false;
+      const newsOk = macroResultFromNews(snapshot).score >= 4 && context.data_status !== "stale";
+
+      if (!approvedDirection) {
+        const entries = [
+          candidateFromSide(snapshot, context, "Long Only", "#1"),
+          candidateFromSide(snapshot, context, "Short Only", "#2", 5)
+        ].filter(Boolean).sort((left, right) => right.score - left.score);
+        entries.forEach((entry, index) => {
+          entry.rank = `#${index + 1}`;
+        });
+        const bestWatch = entries[0] || null;
+        return {
+          entries,
+          best: null,
+          chase: bestWatch
+            ? `Direction is not approved yet. Watch ${bestWatch.type} at ${bestWatch.price}, but do not enter until acceptance, retest, confirmation, and gate alignment appear.`
+            : "Do not enter now. Wait for the next institutional setup.",
+          scoreText: bestWatch
+            ? `Top watchlist score ${bestWatch.score}/100. This is a level plan, not an entry signal. Only 85+ with confirmed acceptance/retest can become Best Entry.`
+            : "No score because live levels are unavailable.",
+          watchOnly: true
+        };
+      }
 
       const entry1Score = entryScore({
         htf: htfOk,
@@ -1882,7 +1945,9 @@
       setText("zb-optimal-entry-score", candidates.scoreText);
       setText("zb-one-trade-entry", candidates.best
         ? `If I can only take one trade today: ${candidates.best.type} at ${candidates.best.price}, after confirmation.`
-        : "If I can only take one trade today: No entry yet. Wait for an 85+ scored acceptance retest.");
+        : candidates.watchOnly && candidates.entries[0]
+          ? `If I can only take one trade today: watch ${candidates.entries[0].type} at ${candidates.entries[0].price}; no entry until it scores 85+ with acceptance and retest.`
+          : "If I can only take one trade today: No entry yet. Wait for an 85+ scored acceptance retest.");
 
       const primary = direction === "No Trade"
         ? "Primary: No Trade until fresh data, institutional gate alignment, and 5-minute or 15-minute acceptance are confirmed."
