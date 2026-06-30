@@ -1124,7 +1124,7 @@
 
       <aside class="score-panel">
         <div class="section-title">Confidence Score</div>
-        <p class="tiny">Enter each category score after completing the checklist.</p>
+        <p class="tiny">Scores and gate checks are computed from the current snapshot. A failed gate means stand aside.</p>
         <div class="score-row"><span>Macro /20</span><strong id="macro-score">0</strong></div>
         <div class="score-row"><span>Trend /35</span><strong id="trend-score">0</strong></div>
         <div class="score-row"><span>Trend Pro /15</span><strong id="trendPro-score">0</strong></div>
@@ -1197,21 +1197,30 @@
       saveState();
     }
 
+    function gateFailureReasons(checks) {
+      return checks
+        .filter((check) => !check.checked)
+        .map((check) => check.closest("label")?.textContent.trim() || "Required confirmation")
+        .slice(0, 3);
+    }
+
     function updateGate() {
       updateAutomatedGateChecks();
       const checks = Array.from(document.querySelectorAll(".gate-check"));
       const context = window.templateSnapshot?.instruments?.[selectedInstrumentKey()];
       const stale = context?.data_status === "stale";
       const passed = !stale && checks.every((check) => check.checked);
+      const missing = gateFailureReasons(checks);
+      const missingText = missing.length ? ` Missing: ${missing.join("; ")}.` : "";
       const box = document.getElementById("gate-box");
       box.textContent = stale
         ? "Fail: market data is stale. Default action is No Trade."
-        : passed ? "Pass: trade is allowed if score rules also agree." : "Fail: default action is No Trade.";
+        : passed ? "Pass: trade is allowed if score rules also agree." : `Fail: default action is No Trade.${missingText}`;
       box.className = "gate-status " + (passed ? "good" : "bad");
       document.getElementById("gate-short").textContent = passed ? "Pass" : "Fail";
       if (!passed) {
         const decisionBox = document.getElementById("decision-box");
-        decisionBox.textContent = stale ? "Stale data: No trade." : "Gate fail: No trade.";
+        decisionBox.textContent = stale ? "Stale data: No trade." : `Gate fail: No trade.${missingText}`;
         decisionBox.className = "decision bad";
         document.getElementById("decision-short").textContent = "No Trade";
       }
