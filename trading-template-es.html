@@ -997,6 +997,48 @@
             </div>
           </div>
         </section>
+
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">ES Professional Entry Plan</div>
+            <div class="weight">Auto</div>
+          </div>
+          <div class="subgrid">
+            <div class="field-group">
+              <div class="group-title">Correct Interpretation</div>
+              <div class="context-readout">
+                <div class="context-main" id="es-context-read">Auto: -</div>
+                <div class="context-value" id="es-context-detail">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Key Levels</div>
+              <div class="context-readout">
+                <div class="context-value" id="es-key-levels">-</div>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="group-title">Best Entry Watchlist</div>
+              <div class="context-readout">
+                <div class="context-main" id="es-one-trade-entry">If I can only take one trade today: -</div>
+                <div class="context-grid">
+                  <div class="context-item">
+                    <div class="context-label">Ranked Entries</div>
+                    <div class="context-value" id="es-ranked-entries">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">Chase Filter</div>
+                    <div class="context-value" id="es-chase-filter">-</div>
+                  </div>
+                  <div class="context-item">
+                    <div class="context-label">No Trade Rule</div>
+                    <div class="context-value" id="es-no-trade-rule">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <aside class="score-panel">
@@ -1477,12 +1519,15 @@
       const auto = context.automation || {};
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
-      const entry = direction === "No Trade" ? "-" : fmt(auto.entry);
+      const esPlan = esEntryPlan(snapshot, context);
+      const entry = direction === "No Trade"
+        ? esPlan.best ? `Watch: ${esPlan.best.entry}` : "-"
+        : fmt(auto.entry);
       const time = stale ? "Wait for fresh market data" : timeWindowLabel(snapshot, context.name || selectedInstrumentKey());
       const note = stale
         ? "No day trade until the latest candle is fresh."
         : direction === "No Trade"
-          ? "No day trade. Wait for a cleaner setup."
+          ? esPlan.summary
           : `Use ${auto.entry_type || "confirmed setup"} only if the gate remains valid.`;
       setText("final-direction", direction);
       setText("final-entry", entry);
@@ -1493,6 +1538,137 @@
         finalBox.textContent = `Final Output: ${direction} · Entry ${entry} · Time ${time}`;
         finalBox.className = "gate-status " + (direction === "No Trade" ? "bad" : "good");
       }
+    }
+
+    function esTicks(points) {
+      if (!Number.isFinite(Number(points))) return "-";
+      return Math.round(Math.abs(Number(points)) / 0.25);
+    }
+
+    function esRr(entry, stop, target) {
+      const risk = Math.abs(entry - stop);
+      if (!risk) return { ratio: 0, text: "-", ticks: "-" };
+      const reward = Math.abs(target - entry);
+      return { ratio: reward / risk, text: `1:${(reward / risk).toFixed(1)}`, ticks: esTicks(risk) };
+    }
+
+    function esEntryLine(entry) {
+      return `${entry.rank} ${entry.type}: Entry ${entry.entry}; Why: ${entry.why}; Confirmation: ${entry.confirmation}; Stop ${entry.stop}; Risk ${entry.riskTicks} ticks; Target 1 ${entry.target1}; Target 2 ${entry.target2}; R:R ${entry.rr}; Score ${entry.score}/100.`;
+    }
+
+    function esEntryPlan(snapshot, context) {
+      const auto = context.automation || {};
+      const stale = context.data_status === "stale";
+      const breakout = context.opening_range_high || auto.trend_pro_240_bullish_level || context.overnight_high;
+      const support1 = context.overnight_high || context.previous_day_high;
+      const support2 = context.previous_day_high || context.opening_range_low;
+      const bearishLine = Math.min(
+        ...[context.opening_range_low, auto.trend_pro_240_bearish_level].filter((value) => Number.isFinite(Number(value)))
+      );
+      const bullishContext = context.trend?.result === "Bullish" || context.higher_timeframe_trend === "Bullish" || auto.trend_pro_result === "Bullish";
+      const gateDirection = stale ? "No Trade" : auto.direction || "No Trade";
+      const newsOk = macroResultFromNews(snapshot).score >= 4 && !stale;
+      const htfScore = bullishContext ? 25 : 0;
+      const newsScore = newsOk ? 10 : 0;
+      const structureScore = 10;
+      const acceptanceScore = 0;
+      const retestScore = 0;
+
+      const entry1 = breakout;
+      const stop1 = Math.min(support1 || breakout - 2, breakout - 0.25);
+      const target1a = entry1 + Math.max((entry1 - stop1) * 2, 8);
+      const target1b = entry1 + Math.max((entry1 - stop1) * 3, 12);
+      const rr1 = esRr(entry1, stop1, target1a);
+      const entry2 = support1 || breakout;
+      const stop2 = Math.min(support2 || entry2 - 2, entry2 - 0.25);
+      const target2a = breakout;
+      const target2b = breakout + Math.max(entry2 - stop2, 6);
+      const rr2 = esRr(entry2, stop2, target2b);
+      const entry3 = bearishLine;
+      const stop3 = breakout + 0.25;
+      const target3a = entry3 - Math.max((stop3 - entry3) * 2, 8);
+      const target3b = entry3 - Math.max((stop3 - entry3) * 3, 12);
+      const rr3 = esRr(entry3, stop3, target3a);
+
+      const entries = [
+        {
+          rank: "#1",
+          type: "Breakout Retest Long",
+          rawEntry: entry1,
+          entry: `${fmt(entry1)} retest`,
+          why: "Bullish trend context, but institutions still need acceptance above the opening range high before a long is valid.",
+          confirmation: `Break and hold above ${fmt(breakout)}, pull back, then reclaim with a strong completed 5-minute candle.`,
+          stop: `Below ${fmt(stop1)}`,
+          riskTicks: rr1.ticks,
+          target1: fmt(target1a),
+          target2: fmt(target1b),
+          rr: rr1.text,
+          score: htfScore + acceptanceScore + retestScore + (rr1.ratio >= 2 ? 15 : 0) + structureScore + newsScore
+        },
+        {
+          rank: "#2",
+          type: "Overnight High Hold",
+          rawEntry: entry2,
+          entry: `${fmt(entry2)} hold`,
+          why: "A deeper pullback into overnight high support gives cleaner risk if buyers defend it.",
+          confirmation: `Hold ${fmt(entry2)} and reclaim toward ${fmt(breakout)} with higher low structure.`,
+          stop: `Below ${fmt(stop2)}`,
+          riskTicks: rr2.ticks,
+          target1: fmt(target2a),
+          target2: fmt(target2b),
+          rr: rr2.text,
+          score: htfScore + acceptanceScore + retestScore + (rr2.ratio >= 2 ? 15 : 0) + structureScore + newsScore
+        },
+        {
+          rank: "#3",
+          type: "Bearish Failure",
+          rawEntry: entry3,
+          entry: `Below ${fmt(entry3)}`,
+          why: "Only valid if bullish context fails and sellers accept below the opening range low / 240-minute bearish line.",
+          confirmation: `Completed 5-minute close below ${fmt(entry3)} and failed reclaim.`,
+          stop: `Above ${fmt(stop3)}`,
+          riskTicks: rr3.ticks,
+          target1: fmt(target3a),
+          target2: fmt(target3b),
+          rr: rr3.text,
+          score: (context.higher_timeframe_trend === "Bearish" ? 25 : 0) + acceptanceScore + retestScore + (rr3.ratio >= 2 ? 15 : 0) + structureScore + newsScore
+        }
+      ].filter((entry) => Number.isFinite(Number(entry.rawEntry))).sort((left, right) => right.score - left.score);
+
+      entries.forEach((entry, index) => {
+        entry.rank = `#${index + 1}`;
+      });
+
+      const best = entries[0] || null;
+      const distanceFromBreakout = esTicks(context.last - breakout);
+      const extended = Number.isFinite(Number(distanceFromBreakout)) && distanceFromBreakout > 40;
+      return {
+        entries,
+        best: best && best.score >= 85 ? best : null,
+        topWatch: best,
+        keyLevels: `Breakout area ${fmt(breakout)} opening range high. Retest/support ${fmt(support1)} overnight high, then ${fmt(support2)} previous day high. Bearish line under ${fmt(context.opening_range_low)} opening range low / ${fmt(auto.trend_pro_240_bearish_level)} 240-minute bearish level.`,
+        chase: `${extended ? "Possible chase risk" : "Not extended from breakout watch area"}. Do not buy randomly at current price. Wait for breakout, retest/hold, and strong completed 5-minute reclaim.`,
+        summary: bullishContext
+          ? "Bullish context, but No Trade until breakout, retest, confirmation candle, order-flow/gate alignment, and 2:1 reward/risk."
+          : "No day trade. ES needs clearer trend and gate alignment.",
+        gateDirection
+      };
+    }
+
+    function applyEsEntryPlan(snapshot, context) {
+      const plan = esEntryPlan(snapshot, context);
+      const bullishContext = context.trend?.result === "Bullish" || context.higher_timeframe_trend === "Bullish" || (context.automation || {}).trend_pro_result === "Bullish";
+      setText("es-context-read", bullishContext ? "Auto: Bullish trend context, not automatic long." : "Auto: No approved directional trade.");
+      setText("es-context-detail", plan.summary);
+      setText("es-key-levels", plan.keyLevels);
+      setText("es-ranked-entries", plan.entries.length ? plan.entries.map(esEntryLine).join(" | ") : "No ranked ES entries until live levels are available.");
+      setText("es-chase-filter", plan.chase);
+      setText("es-no-trade-rule", "No Trade if the institutional gate fails, order flow is neutral/0, acceptance is missing, or reward/risk is below 2:1.");
+      setText("es-one-trade-entry", plan.best
+        ? `If I can only take one trade today: ${plan.best.type} at ${plan.best.entry}.`
+        : plan.topWatch
+          ? `If I can only take one trade today: watch ${plan.topWatch.type} at ${plan.topWatch.entry}; no entry until it scores 85+ with acceptance and retest.`
+          : "If I can only take one trade today: no entry yet.");
     }
 
     function selectedRadioText(name) {
@@ -1729,6 +1905,7 @@
       renderEconomicCalendar(snapshot);
       applyMasterPatternAnalysis(snapshot, context);
       applyFinalOutput(snapshot, context);
+      applyEsEntryPlan(snapshot, context);
 
       updateScores();
     }
