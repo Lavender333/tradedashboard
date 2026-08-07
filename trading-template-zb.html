@@ -660,8 +660,8 @@
             <div class="field-group">
               <div class="group-title">Weekly Trend</div>
               <div class="field-row">
-                <div class="field"><span>Weekly High</span><input type="text" data-auto="weekly-high"></div>
-                <div class="field"><span>Weekly Low</span><input type="text" data-auto="weekly-low"></div>
+                <div class="field"><span>Prior Week High</span><input type="text" data-auto="weekly-high"></div>
+                <div class="field"><span>Prior Week Low</span><input type="text" data-auto="weekly-low"></div>
               </div>
               <div class="checks" style="margin-top: 8px;">
                 <label><input type="checkbox" data-auto="above-weekly-high"> Above Weekly High</label>
@@ -675,8 +675,8 @@
             <div class="field-group">
               <div class="group-title">Monthly Trend <span class="auto-badge" id="monthly-trend-badge">Auto: -</span></div>
               <div class="field-row">
-                <div class="field"><span>Monthly High</span><input type="text" data-auto="monthly-high"></div>
-                <div class="field"><span>Monthly Low</span><input type="text" data-auto="monthly-low"></div>
+                <div class="field"><span>Prior Month High</span><input type="text" data-auto="monthly-high"></div>
+                <div class="field"><span>Prior Month Low</span><input type="text" data-auto="monthly-low"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
@@ -1130,7 +1130,7 @@
         <div class="score-row"><span>Trend /35</span><strong id="trend-score">0</strong></div>
         <div class="score-row"><span>Trend Pro /15</span><strong id="trendPro-score">0</strong></div>
         <div class="score-row"><span>Structure /10</span><strong id="structure-score">0</strong></div>
-        <div class="score-row"><span>Order Flow /10</span><strong id="orderFlow-score">0</strong></div>
+        <div class="score-row"><span>Order Flow</span><strong id="orderFlow-score">N/A</strong></div>
         <div class="score-row"><span>Volatility /5</span><strong id="volatility-score">0</strong></div>
         <div class="score-row"><span>Trade Plan /5</span><strong id="tradePlan-score">0</strong></div>
         <div class="decision bad" id="decision-box">Below 70: No trade.</div>
@@ -1161,8 +1161,9 @@
   </main>
 
   <script src="data/template-snapshot.js"></script>
+  <script src="market-selector.js"></script>
   <script>
-    const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
+    const scoreGroups = ["macro", "trend", "trendPro", "structure", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
     const storageKey = "trading-template-v1-" + selectedInstrumentKey().toLowerCase();
 
@@ -1957,6 +1958,16 @@
 
     function applyZbInstitutionalPlan(snapshot, context) {
       const auto = context.automation || {};
+      const watchText = (auto.watch_levels || []).map((watch) => `#${watch.rank} ${watch.setup}: WATCH ${zbFmt(watch.watch_level)}; ${watch.trigger}; actual entry, structural stop, targets, and R:R pending.`).join(" | ");
+      setText("zb-ranked-entries", watchText || "No watch levels available.");
+      setText("zb-chase-filter", auto.chase_filter || "Wait for confirmation; do not chase.");
+      setText("zb-optimal-entry-score", "No execution score until entry, structural stop, targets, and reward/risk are known.");
+      setText("zb-one-trade-entry", "No entry yet. Monitor the top-ranked watch level and wait for a completed confirmation candle.");
+      setText("zb-primary-plan", `${auto.setup_status || "WAITING FOR CONFIRMATION"}. ${auto.data_quality_reason || "Data quality not verified"}.`);
+      setText("zb-no-trade", "No Trade until data quality, acceptance, retest, confirmation, structural stop, valid directional targets, and reward/risk all pass. Order flow is N/A when disconnected.");
+      ["zb-check-acceptance", "zb-check-retest", "zb-check-confirmation", "zb-check-entry-zone", "zb-check-stop", "zb-check-rr", "zb-check-target"].forEach((name) => setAutoChecked(name, false));
+      return;
+      /* Legacy morning projections retained below for reference but intentionally unreachable. */
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
       const ladder = executionLadder(context);
@@ -2155,6 +2166,7 @@
 
     function applyExecutionLadder(context) {
       const ladder = executionLadder(context);
+      const auto = context.automation || {};
       setText("execution-trigger", `Auto: ${ladder.trigger}`);
       setText("execution-breakout", ladder.breakoutDisplay || zbFmt(ladder.breakout));
       setText("execution-acceptance", ladder.acceptance);
@@ -2162,10 +2174,10 @@
       setText("execution-confirmation", ladder.confirmation);
       setText("execution-stop", ladder.stopDisplay || zbFmt(ladder.stop));
       setText("execution-scale", ladder.scale);
-      setAutoValue("trade-entry", ladder.trigger);
-      setAutoValue("trade-stop", ladder.stopDisplay || zbFmt(ladder.stop));
-      setAutoValue("trade-target-1", zbFmt(ladder.scale1));
-      setAutoValue("trade-target-2", ladder.scale);
+      setAutoValue("trade-entry", "Waiting for 5m confirmation");
+      setAutoValue("trade-stop", "Unknown until retest forms");
+      setAutoValue("trade-target-1", "Calculated after entry + stop");
+      setAutoValue("trade-target-2", "Calculated after entry + stop");
     }
 
     function setAutoChecked(name, checked) {
@@ -2233,6 +2245,8 @@
         return;
       }
 
+      window.renderMarketSelector?.(snapshot);
+
       const key = selectedInstrumentKey();
       const context = snapshot.instruments[key];
       const vix = snapshot.volatility?.vix;
@@ -2248,7 +2262,7 @@
       document.getElementById("auto-es-note").textContent =
         `20/50/72/100/200 trend score ${snapshot.instruments.ES.trend.score}/10`;
       document.getElementById("auto-zb").textContent =
-        `ZB ${fmt(snapshot.instruments.ZB.last)} · ${snapshot.instruments.ZB.trend.result}`;
+        `ZB ${fmt(snapshot.instruments.ZB.last)} · ${snapshot.instruments.ZB.symbol} · ${snapshot.instruments.ZB.last_time}`;
       document.getElementById("auto-zb-note").textContent =
         `20/50/72/100/200 trend score ${snapshot.instruments.ZB.trend.score}/10`;
       document.getElementById("auto-rates").textContent =
@@ -2272,7 +2286,7 @@
       setRadio("trend-pro", window.autoTrendPro);
       setReadout("trend-pro", window.autoTrendPro);
       setRadio("vwap", auto.vwap_position || "Mixed");
-      setReadout("vwap", auto.vwap_position || "Mixed");
+      setReadout("vwap", `${fmt(auto.vwap)} · ${auto.vwap_position || "Mixed"} · distance ${fmt(auto.vwap_distance)}`);
       setRadio("today-bias", auto.todays_bias || "Neutral");
       setReadout("today-bias", auto.todays_bias || "Neutral");
       setRadio("direction", window.autoDirection);
@@ -2307,7 +2321,7 @@
       setText("overnight-inventory", overnight.inventory);
       setText("open-confirmation", overnight.open_confirmation);
       setAutoValue("structure-score", auto.structure_score ?? "");
-      setAutoValue("atr", `${fmt(context.atr_15m)} 15m / ${fmt(context.atr_daily)} daily`);
+      setAutoValue("atr", `${fmt(context.atr_20m ?? context.atr_15m)} pts · 20m ATR(14)`);
       setAutoValue("vix", key === "ES" ? fmt(vix) : "");
       setAutoValue("move", key === "ZB" && move !== null && move !== undefined ? fmt(move) : "");
       setAutoValue("average-daily-range", fmt(context.atr_daily));
@@ -2318,7 +2332,7 @@
       setAutoValue("liquidity-shift", auto.liquidity_shift || "Live order-flow feed not connected");
       setRadio("order-flow", auto.order_flow_result || "Neutral");
       setReadout("order-flow", auto.order_flow_result || "Neutral");
-      setAutoValue("order-flow-score", auto.order_flow_score ?? 0);
+      setAutoValue("order-flow-score", auto.order_flow_score ?? "");
       setAutoChecked("large-bids", false);
       setAutoChecked("large-offers", false);
       setAutoChecked("absorption", false);

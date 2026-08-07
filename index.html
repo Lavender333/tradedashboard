@@ -333,6 +333,37 @@
       statusText.textContent = text;
     }
 
+    function parseSnapshotTime(isoValue, displayValue) {
+      if (isoValue) {
+        return Date.parse(isoValue);
+      }
+      if (!displayValue) {
+        return NaN;
+      }
+      // The legacy snapshot format is "YYYY-MM-DD HH:mm UTC". Normalize it
+      // instead of relying on browser-specific parsing (notably Safari).
+      const match = displayValue.match(
+        /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}) UTC$/
+      );
+      return match
+        ? Date.UTC(match[1], Number(match[2]) - 1, match[3], match[4], match[5])
+        : Date.parse(displayValue);
+    }
+
+    function currentDataAgeMinutes(data) {
+      const candleTime = parseSnapshotTime(data.last_time_iso, null);
+      if (Number.isFinite(candleTime)) {
+        return Math.max(0, (Date.now() - candleTime) / 60000);
+      }
+
+      const recordedAge = Number(data.last_candle_age_minutes);
+      const generatedTime = parseSnapshotTime(data.generated_at_iso, data.generated_at);
+      const elapsedSinceGeneration = Number.isFinite(generatedTime)
+        ? Math.max(0, (Date.now() - generatedTime) / 60000)
+        : 0;
+      return Number.isFinite(recordedAge) ? recordedAge + elapsedSinceGeneration : null;
+    }
+
     async function refreshSnapshot() {
       const errorBox = document.getElementById("error-box");
       const cacheBust = Date.now();
@@ -350,8 +381,12 @@
         document.getElementById("atr-val").textContent =
           data.atr === null || data.atr === undefined ? "-" : Number(data.atr).toFixed(2);
         document.getElementById("provider-symbol").textContent = data.provider + " / " + data.symbol;
-        document.getElementById("data-age").textContent =
-          data.last_candle_age_minutes + "m (" + data.data_status + ")";
+        const currentAge = currentDataAgeMinutes(data);
+        const staleAfter = Number(data.stale_after_minutes) || 45;
+        const currentStatus = currentAge !== null && currentAge <= staleAfter ? "fresh" : "stale";
+        document.getElementById("data-age").textContent = currentAge === null
+          ? "-"
+          : Math.round(currentAge) + "m (" + currentStatus + ")";
         document.getElementById("generated-at").textContent = valueOrDash(data.generated_at);
         document.getElementById("session-window").textContent =
           data.session.start + " -> " + data.session.end;
@@ -384,8 +419,8 @@
           biasCard.classList.add("bias-neutral");
         }
 
-        setStatus(data.data_status === "fresh" ? "fresh" : "stale",
-          data.data_status === "fresh" ? "Fresh snapshot" : "Stale snapshot");
+        setStatus(currentStatus,
+          currentStatus === "fresh" ? "Fresh snapshot" : "Stale snapshot");
       } catch (e) {
         setStatus("error", "Data unavailable");
         errorBox.textContent = e.message;

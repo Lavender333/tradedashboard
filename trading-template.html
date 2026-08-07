@@ -664,8 +664,8 @@
             <div class="field-group">
               <div class="group-title">Weekly Trend</div>
               <div class="field-row">
-                <div class="field"><span>Weekly High</span><input type="text" data-auto="weekly-high"></div>
-                <div class="field"><span>Weekly Low</span><input type="text" data-auto="weekly-low"></div>
+                <div class="field"><span>Prior Week High</span><input type="text" data-auto="weekly-high"></div>
+                <div class="field"><span>Prior Week Low</span><input type="text" data-auto="weekly-low"></div>
               </div>
               <div class="checks" style="margin-top: 8px;">
                 <label><input type="checkbox" data-auto="above-weekly-high"> Above Weekly High</label>
@@ -679,8 +679,8 @@
             <div class="field-group">
               <div class="group-title">Monthly Trend <span class="auto-badge" id="monthly-trend-badge">Auto: -</span></div>
               <div class="field-row">
-                <div class="field"><span>Monthly High</span><input type="text" data-auto="monthly-high"></div>
-                <div class="field"><span>Monthly Low</span><input type="text" data-auto="monthly-low"></div>
+                <div class="field"><span>Prior Month High</span><input type="text" data-auto="monthly-high"></div>
+                <div class="field"><span>Prior Month Low</span><input type="text" data-auto="monthly-low"></div>
               </div>
               <div class="field" style="margin-top: 10px;">
                 <span>Weight: 10%</span>
@@ -965,8 +965,8 @@
             <div class="field-group">
               <div class="group-title">Trade Levels</div>
               <div class="field-row">
-                <div class="field"><span>Entry</span><input type="text" data-auto="trade-entry"></div>
-                <div class="field"><span>Stop</span><input type="text" data-auto="trade-stop"></div>
+                <div class="field"><span>Actual Entry (after confirmation)</span><input type="text" data-auto="trade-entry"></div>
+                <div class="field"><span>Structural Stop</span><input type="text" data-auto="trade-stop"></div>
                 <div class="field"><span>Target 1</span><input type="text" data-auto="trade-target-1"></div>
                 <div class="field"><span>Target 2</span><input type="text" data-auto="trade-target-2"></div>
               </div>
@@ -1011,7 +1011,7 @@
         <div class="score-row"><span>Trend /35</span><strong id="trend-score">0</strong></div>
         <div class="score-row"><span>Trend Pro /15</span><strong id="trendPro-score">0</strong></div>
         <div class="score-row"><span>Structure /10</span><strong id="structure-score">0</strong></div>
-        <div class="score-row"><span>Order Flow /10</span><strong id="orderFlow-score">0</strong></div>
+        <div class="score-row"><span>Order Flow</span><strong id="orderFlow-score">N/A</strong></div>
         <div class="score-row"><span>Volatility /5</span><strong id="volatility-score">0</strong></div>
         <div class="score-row"><span>Trade Plan /5</span><strong id="tradePlan-score">0</strong></div>
         <div class="decision bad" id="decision-box">Below 70: No trade.</div>
@@ -1042,8 +1042,9 @@
   </main>
 
   <script src="data/template-snapshot.js"></script>
+  <script src="market-selector.js"></script>
   <script>
-    const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
+    const scoreGroups = ["macro", "trend", "trendPro", "structure", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
 
     function clampScore(input) {
@@ -1655,6 +1656,8 @@
         return;
       }
 
+      window.renderMarketSelector?.(snapshot);
+
       const key = selectedInstrumentKey();
       const context = snapshot.instruments[key];
       const vix = snapshot.volatility?.vix;
@@ -1694,7 +1697,7 @@
       setRadio("trend-pro", window.autoTrendPro);
       setReadout("trend-pro", window.autoTrendPro);
       setRadio("vwap", auto.vwap_position || "Mixed");
-      setReadout("vwap", auto.vwap_position || "Mixed");
+      setReadout("vwap", `${fmt(auto.vwap)} · ${auto.vwap_position || "Mixed"} · distance ${fmt(auto.vwap_distance)}`);
       setRadio("today-bias", auto.todays_bias || "Neutral");
       setReadout("today-bias", auto.todays_bias || "Neutral");
       setRadio("direction", window.autoDirection);
@@ -1729,7 +1732,7 @@
       setText("overnight-inventory", overnight.inventory);
       setText("open-confirmation", overnight.open_confirmation);
       setAutoValue("structure-score", auto.structure_score ?? "");
-      setAutoValue("atr", `${fmt(context.atr_15m)} 15m / ${fmt(context.atr_daily)} daily`);
+      setAutoValue("atr", `${fmt(context.atr_20m ?? context.atr_15m)} pts · 20m ATR(14)`);
       setAutoValue("vix", key === "ES" ? fmt(vix) : "");
       setAutoValue("move", key === "ZB" && move !== null && move !== undefined ? fmt(move) : "");
       setAutoValue("average-daily-range", fmt(context.atr_daily));
@@ -1740,16 +1743,16 @@
       setAutoValue("liquidity-shift", auto.liquidity_shift || "Live order-flow feed not connected");
       setRadio("order-flow", auto.order_flow_result || "Neutral");
       setReadout("order-flow", auto.order_flow_result || "Neutral");
-      setAutoValue("order-flow-score", auto.order_flow_score ?? 0);
+      setAutoValue("order-flow-score", auto.order_flow_score ?? "");
       setAutoChecked("large-bids", false);
       setAutoChecked("large-offers", false);
       setAutoChecked("absorption", false);
       setAutoChecked("icebergs", false);
       applyEntryType(auto.entry_type || "No Trade");
-      setAutoValue("trade-entry", fmt(auto.entry));
-      setAutoValue("trade-stop", fmt(auto.stop));
-      setAutoValue("trade-target-1", fmt(auto.target1));
-      setAutoValue("trade-target-2", fmt(auto.target2));
+      setAutoValue("trade-entry", auto.entry == null ? "Waiting for 5m confirmation" : fmt(auto.entry));
+      setAutoValue("trade-stop", auto.stop == null ? "Unknown until retest forms" : fmt(auto.stop));
+      setAutoValue("trade-target-1", auto.target1 == null ? "Calculated after entry + stop" : fmt(auto.target1));
+      setAutoValue("trade-target-2", auto.target2 == null ? "Calculated after entry + stop" : fmt(auto.target2));
       setAutoValue("trade-plan-score", auto.trade_plan_score ?? "");
       applyOvernightNews(snapshot);
       renderEconomicCalendar(snapshot);

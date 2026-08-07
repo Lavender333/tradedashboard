@@ -1,9 +1,10 @@
 """Build automated market context for the ES/ZB trading template."""
 
 import json
+import os
 import re
 from html import unescape
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List
 from urllib.parse import urlencode
@@ -26,8 +27,8 @@ NASDAQ_HEADERS = {
 
 SOURCE_CATALOG = {
     "futures_prices": {
-        "label": "Yahoo Finance delayed futures candles",
-        "role": "ES/ZB OHLC, overnight levels, moving averages, VWAP proxy",
+        "label": "Databento CME futures data",
+        "role": "Single ES/ZB source for OHLCV and locally calculated indicators",
         "status": "dynamic",
     },
     "rates": {
@@ -46,6 +47,15 @@ SOURCE_CATALOG = {
         "status": "mapped",
     },
 }
+
+DATABENTO_DATASET = os.environ.get("DATABENTO_DATASET", "GLBX.MDP3")
+FUTURES_PROVIDER = os.environ.get("TEMPLATE_DATA_PROVIDER", "databento").lower()
+FUTURES_SYMBOLS = {
+    "ES": os.environ.get("ES_SYMBOL", "ES.c.0"),
+    "ZB": os.environ.get("ZB_SYMBOL", "ZB.c.0"),
+}
+YAHOO_FALLBACK_SYMBOLS = {"ES": "ES=F", "ZB": "ZB=F"}
+ACTIVE_FUTURES_SOURCE = ""
 
 OFFICIAL_EVENT_SOURCES = [
     (re.compile(r"\b(jolts|job openings|payroll|nonfarm|nfp|unemployment|cpi|ppi|claims)\b", re.I), "BLS", "https://www.bls.gov/"),
@@ -105,10 +115,88 @@ def candles(symbol: str, range_: str, interval: str) -> List[Dict]:
     return rows
 
 
+def databento_candles(symbol: str, start: datetime, schema: str = "ohlcv-1m") -> List[Dict]:
+    api_key = os.environ.get("DATABENTO_API_KEY")
+    if not api_key:
+        raise RuntimeError("DATABENTO_API_KEY is not configured")
+    try:
+        import databento as db
+    except ImportError as exc:
+        raise RuntimeError("Install the databento package") from exc
+
+    data = db.Historical(api_key).timeseries.get_range(
+        dataset=DATABENTO_DATASET,
+        symbols=[symbol],
+        schema=schema,
+        start=start.isoformat(),
+        end=datetime.now(timezone.utc).isoformat(),
+    ).to_df().reset_index()
+    time_column = "ts_event" if "ts_event" in data.columns else "index"
+    rows = []
+    for record in data.to_dict("records"):
+        values = {key: record.get(key) for key in ("open", "high", "low", "close")}
+        if any(value is None for value in values.values()):
+            continue
+        scale = 1_000_000_000 if max(abs(float(value)) for value in values.values()) > 1_000_000 else 1
+        rows.append({
+            "time": record[time_column].to_pydatetime().astimezone(timezone.utc),
+            "open": float(values["open"]) / scale,
+            "high": float(values["high"]) / scale,
+            "low": float(values["low"]) / scale,
+            "close": float(values["close"]) / scale,
+            "volume": float(record.get("volume") or 0),
+        })
+    if not rows:
+        raise RuntimeError(f"{symbol}: Databento returned no usable candles")
+    return rows
+
+
+def aggregate_candles(rows: List[Dict], minutes: int = 20) -> List[Dict]:
+    buckets = {}
+    for row in rows:
+        stamp = row["time"].astimezone(timezone.utc)
+        bucket_minute = (stamp.minute // minutes) * minutes
+        key = stamp.replace(minute=bucket_minute, second=0, microsecond=0)
+        bucket = buckets.setdefault(key, {"time": key, "open": row["open"], "high": row["high"], "low": row["low"], "close": row["close"], "volume": 0})
+        bucket["high"] = max(bucket["high"], row["high"])
+        bucket["low"] = min(bucket["low"], row["low"])
+        bucket["close"] = row["close"]
+        bucket["volume"] += row.get("volume") or 0
+    return [buckets[key] for key in sorted(buckets)]
+
+
+def futures_history(name: str) -> tuple[List[Dict], List[Dict], str]:
+    global ACTIVE_FUTURES_SOURCE
+    if FUTURES_PROVIDER == "databento":
+        try:
+            symbol = FUTURES_SYMBOLS[name]
+            minute_rows = databento_candles(symbol, datetime.now(timezone.utc) - timedelta(days=10))
+            daily = databento_candles(symbol, datetime.now(timezone.utc) - timedelta(days=370), "ohlcv-1d")
+            ACTIVE_FUTURES_SOURCE = "Databento CME futures data"
+            return daily, aggregate_candles(minute_rows, 20), symbol
+        except Exception:
+            if os.environ.get("ALLOW_YAHOO_FALLBACK", "true").lower() != "true":
+                raise
+    symbol = YAHOO_FALLBACK_SYMBOLS[name]
+    ACTIVE_FUTURES_SOURCE = "Yahoo Finance delayed backup"
+    return candles(symbol, "1y", "1d"), aggregate_candles(candles(symbol, "5d", "5m"), 20), symbol
+
+
 def sma(values: List[float], period: int):
     if len(values) < period:
         return None
     return sum(values[-period:]) / period
+
+
+def ema(values: List[float], period: int):
+    """Return a standard exponentially weighted moving average."""
+    if len(values) < period:
+        return None
+    multiplier = 2 / (period + 1)
+    result = sum(values[:period]) / period
+    for value in values[period:]:
+        result = (value - result) * multiplier + result
+    return result
 
 
 def atr(rows: List[Dict], period: int = 14):
@@ -120,7 +208,10 @@ def atr(rows: List[Dict], period: int = 14):
         low = rows[index]["low"]
         prev_close = rows[index - 1]["close"]
         true_ranges.append(max(high - low, abs(high - prev_close), abs(low - prev_close)))
-    return sum(true_ranges[-period:]) / period
+    value = sum(true_ranges[:period]) / period
+    for true_range in true_ranges[period:]:
+        value = ((period - 1) * value + true_range) / period
+    return value
 
 
 def vwap(rows: List[Dict]):
@@ -134,6 +225,17 @@ def vwap(rows: List[Dict]):
     if total_volume == 0:
         return None
     return weighted / total_volume
+
+
+def bollinger(rows: List[Dict], period: int = 20, deviations: float = 2.0) -> Dict:
+    closes = [row["close"] for row in rows]
+    if len(closes) < period:
+        return {"middle": None, "upper": None, "lower": None}
+    window = closes[-period:]
+    middle = sum(window) / period
+    variance = sum((value - middle) ** 2 for value in window) / period
+    width = deviations * variance ** 0.5
+    return {"middle": round_price(middle), "upper": round_price(middle + width), "lower": round_price(middle - width)}
 
 
 def round_price(value):
@@ -234,9 +336,10 @@ def volatility_score(name: str, vix, daily_atr_value) -> int:
     return 0
 
 
-def trade_decision(rate_result: str, htf_result: str, stale_data: bool = False) -> Dict:
-    if stale_data:
-        return {"todays_bias": "Neutral", "direction": "No Trade", "trade_plan_score": 0}
+def trade_decision(rate_result: str, htf_result: str, data_quality_pass: bool = False) -> Dict:
+    if not data_quality_pass:
+        bias = "Bull" if htf_result == "Bullish" else "Bear" if htf_result == "Bearish" else "Neutral"
+        return {"todays_bias": bias, "direction": "No Trade", "trade_plan_score": 0}
     if rate_result == "Bullish" and htf_result == "Bullish":
         return {"todays_bias": "Bull", "direction": "Long Only", "trade_plan_score": 3}
     if rate_result == "Bearish" and htf_result == "Bearish":
@@ -244,39 +347,25 @@ def trade_decision(rate_result: str, htf_result: str, stale_data: bool = False) 
     return {"todays_bias": "Neutral", "direction": "No Trade", "trade_plan_score": 0}
 
 
-def trade_levels(direction: str, last: float, previous_high: float, previous_low: float, atr_value) -> Dict:
-    atr_points = atr_value or max(abs(previous_high - previous_low), 1)
-    if direction == "Long Only":
-        entry = max(last, previous_high)
-        stop = entry - (atr_points * 0.35)
-        target1 = entry + (entry - stop) * 2
-        target2 = entry + (entry - stop) * 3
-        return {
-            "entry_type": "Breakout",
-            "entry": round_price(entry),
-            "stop": round_price(stop),
-            "target1": round_price(target1),
-            "target2": round_price(target2),
-        }
-    if direction == "Short Only":
-        entry = min(last, previous_low)
-        stop = entry + (atr_points * 0.35)
-        target1 = entry - (stop - entry) * 2
-        target2 = entry - (stop - entry) * 3
-        return {
-            "entry_type": "Breakdown",
-            "entry": round_price(entry),
-            "stop": round_price(stop),
-            "target1": round_price(target1),
-            "target2": round_price(target2),
-        }
-    return {
-        "entry_type": "No Trade",
-        "entry": None,
-        "stop": None,
-        "target1": None,
-        "target2": None,
-    }
+def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: float, previous_low: float) -> List[Dict]:
+    if htf_result == "Bullish":
+        candidates = [
+            ("Opening Range Breakout Retest", market_context["opening_range_high"], "5m close above, retest, then reclaim"),
+            ("Overnight High Breakout Retest", market_context["overnight_high"], "5m acceptance above, retest, then reclaim"),
+            ("Previous Day Low Rejection", previous_low, "sweep and completed 5m reclaim"),
+        ]
+    elif htf_result == "Bearish":
+        candidates = [
+            ("Opening Range Breakdown Retest", market_context["opening_range_low"], "5m close below, retest, then rejection"),
+            ("Overnight Low Breakdown Retest", market_context["overnight_low"], "5m acceptance below, retest, then rejection"),
+            ("Previous Day High Rejection", previous_high, "sweep and completed 5m rejection"),
+        ]
+    else:
+        candidates = [
+            ("Opening Range High", market_context["opening_range_high"], "wait for confirmed break/retest"),
+            ("Opening Range Low", market_context["opening_range_low"], "wait for confirmed break/retest"),
+        ]
+    return [{"rank": index + 1, "setup": setup, "watch_level": round_price(level), "trigger": trigger, "status": "WAITING FOR CONFIRMATION"} for index, (setup, level, trigger) in enumerate(candidates)]
 
 
 def ny_time(row: Dict):
@@ -406,12 +495,167 @@ def combined_htf_result(daily_result: str, weekly_result: str, monthly_result: s
     return "Neutral"
 
 
-def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: datetime, vix=None) -> Dict:
-    daily = candles(symbol, "1y", "1d")
-    intraday = candles(symbol, "5d", "15m")
+def selector_rating(score: int, ready: bool, data_fresh: bool = True) -> str:
+    if not data_fresh:
+        return "STALE"
+    if not ready:
+        return "NOT READY"
+    if score >= 5:
+        return "A+"
+    if score == 4:
+        return "WAIT"
+    return "SKIP"
+
+
+def market_selector(
+    name: str,
+    generated_at: datetime,
+    current: float,
+    htf_result: str,
+    ema20_value,
+    ema50_value,
+    vwap_value,
+    key_levels: Dict[str, float],
+    atr_value,
+    five_minute_rows: List[Dict],
+    data_fresh: bool,
+) -> Dict:
+    """Score the six objective checks used to choose between ES and ZB."""
+    decision_minutes = 8 * 60 + 10 if name == "ZB" else 9 * 60 + 20
+    decision_time = "08:10 ET" if name == "ZB" else "09:20 ET"
+    now_et = generated_at.astimezone(ZoneInfo("America/New_York"))
+    ready = now_et.hour * 60 + now_et.minute >= decision_minutes
+    direction = "LONG" if htf_result == "Bullish" else "SHORT" if htf_result == "Bearish" else "NONE"
+    tolerance = max(float(atr_value or 0) * 0.25, 0.01)
+    usable_levels = {key: float(value) for key, value in key_levels.items() if value is not None}
+    nearest_name, nearest_level = (None, None)
+    if usable_levels:
+        nearest_name, nearest_level = min(usable_levels.items(), key=lambda item: abs(current - item[1]))
+
+    htf_clear = direction != "NONE"
+    ema_aligned = bool(
+        ema20_value is not None
+        and ema50_value is not None
+        and ((direction == "LONG" and ema20_value > ema50_value) or (direction == "SHORT" and ema20_value < ema50_value))
+    )
+    vwap_aligned = bool(
+        vwap_value is not None
+        and ((direction == "LONG" and current > vwap_value) or (direction == "SHORT" and current < vwap_value))
+    )
+    at_level = nearest_level is not None and abs(current - nearest_level) <= tolerance
+
+    targets = []
+    if direction == "LONG":
+        targets = [(key, value) for key, value in usable_levels.items() if value > current + tolerance]
+    elif direction == "SHORT":
+        targets = [(key, value) for key, value in usable_levels.items() if value < current - tolerance]
+    if targets:
+        target_name, target_level = min(targets, key=lambda item: abs(current - item[1]))
+        room = abs(target_level - current)
+    else:
+        target_name, target_level, room = None, None, 0
+    enough_room = bool(atr_value and room >= float(atr_value) * 0.5)
+
+    confirmation_level = nearest_level if at_level else vwap_value
+    completed_rows = [row for row in five_minute_rows if row["time"] + timedelta(minutes=5) <= generated_at]
+    completed_closes = [row["close"] for row in completed_rows[-2:]]
+    if direction == "LONG" and confirmation_level is not None:
+        confirmed = bool(completed_closes and all(close > confirmation_level for close in completed_closes))
+    elif direction == "SHORT" and confirmation_level is not None:
+        confirmed = bool(completed_closes and all(close < confirmation_level for close in completed_closes))
+    else:
+        confirmed = False
+
+    checks = {
+        "htf_direction": {
+            "pass": htf_clear,
+            "evidence": f"HTF {htf_result}; directional plan {direction}",
+        },
+        "ema_alignment": {
+            "pass": ema_aligned,
+            "evidence": f"EMA20 {round_price(ema20_value)} vs EMA50 {round_price(ema50_value)}",
+        },
+        "vwap_alignment": {
+            "pass": vwap_aligned,
+            "evidence": f"Price {round_price(current)} vs VWAP {round_price(vwap_value)}",
+        },
+        "meaningful_level": {
+            "pass": at_level,
+            "evidence": f"Nearest: {nearest_name or '-'} {round_price(nearest_level)}; distance {round_price(abs(current - nearest_level)) if nearest_level is not None else '-'}",
+        },
+        "room_to_target": {
+            "pass": enough_room,
+            "evidence": f"Next: {target_name or '-'} {round_price(target_level)}; room {round_price(room)}",
+        },
+        "confirmed_reaction": {
+            "pass": confirmed,
+            "evidence": f"{len(completed_closes)} five-minute close(s) vs {round_price(confirmation_level)}",
+        },
+    }
+    score = sum(1 for check in checks.values() if check["pass"])
+    return {
+        "name": name,
+        "decision_time": decision_time,
+        "ready": ready,
+        "data_fresh": data_fresh,
+        "direction": direction,
+        "checks": checks,
+        "score": score,
+        "rating": selector_rating(score, ready, data_fresh),
+        "target_room": round_price(room),
+        "target_room_atr": round(room / float(atr_value), 3) if atr_value else 0,
+        "vwap_distance": round_price(abs(current - vwap_value)) if vwap_value is not None else None,
+        "vwap_distance_atr": round(abs(current - vwap_value) / float(atr_value), 3) if vwap_value is not None and atr_value else 0,
+        "confirmed": confirmed,
+        "fib_50": round_price(key_levels["fib_50"]),
+        "pivot": round_price(key_levels["pivot"]),
+    }
+
+
+def choose_market(instruments: Dict[str, Dict]) -> Dict:
+    """Choose one market using score, target room, VWAP separation, and confirmation."""
+    candidates = [
+        instrument["selector"]
+        for instrument in instruments.values()
+        if instrument["selector"]["ready"] and instrument["selector"]["data_fresh"]
+    ]
+    if not candidates:
+        return {"market": None, "decision": "NOT READY", "reason": "Wait for decision time and fresh market data."}
+
+    ranked = sorted(
+        candidates,
+        key=lambda item: (
+            item["score"],
+            item["target_room_atr"] or 0,
+            item["vwap_distance_atr"] or 0,
+            1 if item["confirmed"] else 0,
+        ),
+        reverse=True,
+    )
+    winner = ranked[0]
+    if winner["score"] < 4:
+        return {"market": None, "decision": "SKIP BOTH", "reason": "Neither market reached the four-point watch threshold."}
+    if len(ranked) > 1:
+        first_key = (winner["score"], winner["target_room_atr"], winner["vwap_distance_atr"], winner["confirmed"])
+        second = ranked[1]
+        second_key = (second["score"], second["target_room_atr"], second["vwap_distance_atr"], second["confirmed"])
+        if first_key == second_key:
+            return {"market": None, "decision": "WAIT", "reason": "The markets are tied with no clear quality advantage."}
+    action = "TRADE" if winner["score"] >= 5 else "WATCH"
+    return {
+        "market": winner["name"],
+        "decision": f"{action} {winner['name']}",
+        "reason": f"{winner['name']} leads with {winner['score']}/6 checks and the cleaner tie-break profile.",
+    }
+
+
+def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix=None) -> Dict:
+    daily, intraday, symbol = futures_history(name)
+    five_minute = intraday
     closes = [row["close"] for row in daily]
     current = intraday[-1]["close"]
     averages = {f"ma{period}": sma(closes, period) for period in [20, 50, 72, 100, 200]}
+    exponential_averages = {f"ema{period}": ema(closes, period) for period in [20, 50]}
     trend = trend_score(current, averages)
     prev_day = daily[-2] if len(daily) > 1 else daily[-1]
     weekly_range = period_range(daily, lambda value: value.isocalendar()[:2])
@@ -427,6 +671,12 @@ def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: 
     market_context = session_market_context(intraday)
     overnight = overnight_context(intraday, market_context)
     vwap_value = market_context["vwap"]
+    bands = bollinger(intraday)
+    band_width = (bands["upper"] - bands["lower"]) if bands["upper"] is not None else None
+    bb_position = ((current - bands["lower"]) / band_width) if band_width else None
+    chase_status = "N/A"
+    if bb_position is not None:
+        chase_status = "LONG CHASE — wait for pullback/retest" if bb_position > 0.85 else "SHORT CHASE — wait for pullback/retest" if bb_position < 0.15 else "PASS — normal band position"
     structure = structure_score(
         current,
         prev_day["high"],
@@ -435,19 +685,48 @@ def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: 
         market_context["overnight_low"],
         vwap_value,
     )
-    decision = trade_decision(rate_result, htf_result, data_status == "stale")
-    plan_levels = trade_levels(decision["direction"], current, prev_day["high"], prev_day["low"], daily_atr)
+    key_levels = {
+        "overnight_high": market_context["overnight_high"],
+        "overnight_low": market_context["overnight_low"],
+        "previous_day_high": prev_day["high"],
+        "previous_day_low": prev_day["low"],
+        "previous_week_high": weekly_range["high"],
+        "previous_week_low": weekly_range["low"],
+        "fib_50": (prev_day["high"] + prev_day["low"]) / 2,
+        "pivot": (prev_day["high"] + prev_day["low"] + prev_day["close"]) / 3,
+    }
+    correct_date = ny_time(intraday[-1]).date() == datetime.now(ZoneInfo("America/New_York")).date()
+    indicators_ready = vwap_value is not None and intraday_atr is not None and bands["middle"] is not None
+    source_live = ACTIVE_FUTURES_SOURCE.startswith("Databento")
+    data_quality_pass = source_live and age_minutes <= 2 and correct_date and indicators_ready
+    decision = trade_decision(rate_result, htf_result, False)
+    watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
+    selector = market_selector(
+        name,
+        generated_at,
+        current,
+        htf_result,
+        exponential_averages["ema20"],
+        exponential_averages["ema50"],
+        vwap_value,
+        key_levels,
+        intraday_atr,
+        five_minute,
+        data_quality_pass,
+    )
     auto = {
         "direction": decision["direction"],
         "delta_result": "Mixed",
-        "entry_type": plan_levels["entry_type"],
-        "entry": plan_levels["entry"],
-        "stop": plan_levels["stop"],
-        "target1": plan_levels["target1"],
-        "target2": plan_levels["target2"],
-        "liquidity_shift": "Live order-flow feed not connected",
-        "order_flow_result": "Neutral",
-        "order_flow_score": 0,
+        "entry_type": "Watch Zone → Trigger → Actual Entry",
+        "entry": None,
+        "stop": None,
+        "target1": None,
+        "target2": None,
+        "setup_status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
+        "watch_levels": watch_levels,
+        "liquidity_shift": "N/A — order-flow feed not connected",
+        "order_flow_result": "Not Connected",
+        "order_flow_score": None,
         "todays_bias": decision["todays_bias"],
         "trade_plan_score": decision["trade_plan_score"],
         "trend_pro_daily_bullish_level": round_price(max(current, prev_day["high"])),
@@ -460,6 +739,11 @@ def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: 
         "volatility_score": volatility_score(name, vix, daily_atr),
         "vwap": structure["vwap"],
         "vwap_position": structure["vwap_position"],
+        "vwap_distance": round_price(current - vwap_value) if vwap_value is not None else None,
+        "bb_position": None if bb_position is None else round(bb_position, 3),
+        "chase_filter": chase_status,
+        "data_quality_pass": data_quality_pass,
+        "data_quality_reason": "PASS" if data_quality_pass else ("DELAYED DATA — Planning Only" if not source_live else "Execution confirmation feed not current"),
     }
 
     return {
@@ -471,6 +755,8 @@ def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: 
         "last_candle_age_minutes": age_minutes,
         "data_status": data_status,
         "moving_averages": {key: round_price(value) for key, value in averages.items()},
+        "exponential_moving_averages": {key: round_price(value) for key, value in exponential_averages.items()},
+        "selector": selector,
         "trend": trend,
         "weekly_high": round_price(weekly_range["high"]),
         "weekly_low": round_price(weekly_range["low"]),
@@ -486,7 +772,9 @@ def instrument_snapshot(name: str, symbol: str, rate_result: str, generated_at: 
         "overnight_high": round_price(market_context["overnight_high"]),
         "overnight_low": round_price(market_context["overnight_low"]),
         "overnight_context": overnight,
+        "atr_20m": round_price(intraday_atr),
         "atr_15m": round_price(intraday_atr),
+        "bollinger_20_2_20m": bands,
         "atr_daily": round_price(daily_atr),
     }
 
@@ -533,6 +821,8 @@ def source_status(events: List[Dict]) -> Dict:
         if event.get("primary_source") and event.get("primary_source") != "Economic calendar provider"
     })
     catalog = {key: value.copy() for key, value in SOURCE_CATALOG.items()}
+    catalog["futures_prices"]["label"] = ACTIVE_FUTURES_SOURCE
+    catalog["futures_prices"]["status"] = "primary" if ACTIVE_FUTURES_SOURCE.startswith("Databento") else "fallback-delayed"
     catalog["economic_calendar"]["events"] = len(events)
     catalog["economic_calendar"]["primary_sources"] = calendar_primary_sources
     return {
@@ -543,8 +833,8 @@ def source_status(events: List[Dict]) -> Dict:
         ],
         "catalog": catalog,
         "summary": (
-            "Dynamic sources: futures/rates from Yahoo delayed feeds; macro calendar from Nasdaq; "
-            "events tagged to official primary sources when recognized."
+            f"ES/ZB: {ACTIVE_FUTURES_SOURCE}; all futures technicals calculated locally from that feed. "
+            "VIX and Treasury yields are delayed context. Macro events are tagged to official sources."
         ),
     }
 
@@ -667,18 +957,20 @@ def safe_build() -> Dict:
         }
         economic_calendar = load_economic_calendar()
         instruments = {
-            "ES": instrument_snapshot("ES", "ES=F", rate_context["result"], generated_at_dt, volatility["vix"]),
-            "ZB": instrument_snapshot("ZB", "ZB=F", rate_context["result"], generated_at_dt, volatility["vix"]),
+            "ES": instrument_snapshot("ES", rate_context["result"], generated_at_dt, volatility["vix"]),
+            "ZB": instrument_snapshot("ZB", rate_context["result"], generated_at_dt, volatility["vix"]),
         }
+        selection = choose_market(instruments)
         return {
             "generated_at": generated_at,
-            "provider": "Dynamic delayed market data",
+            "provider": ACTIVE_FUTURES_SOURCE,
             "data_sources": source_status(economic_calendar),
             "yields": yields,
             "rate_context": rate_context,
             "economic_calendar": economic_calendar,
             "instruments": instruments,
-            "volatility": volatility,
+            "market_selection": selection,
+            "volatility": {**volatility, "vix_status": "delayed"},
             "suggested_scores": {
                 "macro_rates": rate_context["score"],
                 "es_daily_trend": instruments["ES"]["trend"]["score"],

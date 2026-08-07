@@ -443,6 +443,7 @@ def get_snapshot() -> Dict[str, object]:
         "stale_after_minutes": STALE_AFTER_MINUTES,
         "last_candle_age_minutes": round(last_age.total_seconds() / 60, 1),
         "last_time": last_time_et.strftime("%Y-%m-%d %H:%M %Z"),
+        "last_time_iso": last_time_utc.astimezone(timezone.utc).isoformat(),
         "last_close": round(last_close, 1),
         "atr": round(atr, 2),
         "session": {

@@ -62,15 +62,17 @@ https://lavender333.github.io/tradedashboard/trading-template-es.html
 https://lavender333.github.io/tradedashboard/trading-template-zb.html
 ```
 
-The ES/ZB template auto-fills the measurable market context from delayed public data:
+The ES/ZB template uses Databento CME futures data when `DATABENTO_API_KEY` is configured. It builds 20-minute candles and calculates futures technicals locally from that single feed. Yahoo is an explicitly labeled delayed backup only.
 
+- Daily ES-vs-ZB six-point selection at the 8:10 ET (ZB) and 9:20 ET (ES) checkpoints, using HTF direction, true EMA 20/50 alignment, VWAP, key-level proximity, ATR-normalized target room, and one-to-two completed five-minute closes
+- A `TRADE`, `WATCH`, `WAIT`, or `SKIP BOTH` recommendation before the detailed 100-point worksheet and institutional gate
 - ES and ZB current price context
 - 20/50/72/100/200 daily moving-average checks
 - Daily trend score suggestion
 - Weekly and monthly high/low
 - Previous day high/low
 - Opening range and overnight high/low
-- ATR, VIX, and Treasury-yield direction
+- ATR(14) on 20-minute candles, Bollinger Bands (20,2), delayed VIX context, and Treasury-yield direction
 - Economic calendar highlights from the live Nasdaq Economic Calendar feed, with `data/economic-calendar.json` as a fallback
 - Overnight / Europe context using overnight range, pre-open direction, inventory, and open confirmation signals
 - Instrument-specific ES/ZB master pattern analysis for market state, highest-probability setup, liquidity pattern, news behavior, time window, and intermarket read
@@ -78,7 +80,7 @@ The ES/ZB template auto-fills the measurable market context from delayed public 
 
 Manual confirmation is still required for custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
 
-GitHub Pages cannot run Flask, so the Pages version reads `data/snapshot.json`. The included GitHub Actions workflow refreshes that file every 15 minutes and deploys the static site. It uses Yahoo Finance delayed `MES=F` candles when no Databento key is configured, and switches to Databento when `DATABENTO_API_KEY` exists.
+GitHub Pages cannot run Flask, so the Pages version reads generated snapshots. The included workflow refreshes them every 15 minutes. Databento is primary for MES, ES, and ZB when its key is configured; Yahoo is used only when the explicit backup setting is enabled and is labeled delayed in the dashboard.
 
 For trading-grade data:
 
