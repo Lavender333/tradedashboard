@@ -37,13 +37,13 @@ jobs:
 
       - name: Build market snapshot
         env:
-          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
-          MES_SYMBOL: MES.c.0
+          MES_DATA_PROVIDER: yahoo
           YAHOO_SYMBOL: MES=F
-          DATABENTO_DATASET: GLBX.MDP3
         run: python scripts/build_pages_snapshot.py
 
       - name: Build template automation snapshot
+        env:
+          TEMPLATE_DATA_PROVIDER: yahoo
         run: python scripts/build_template_snapshot.py
 
       - name: Prepare static site

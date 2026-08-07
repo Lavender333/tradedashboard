@@ -62,7 +62,7 @@ https://lavender333.github.io/tradedashboard/trading-template-es.html
 https://lavender333.github.io/tradedashboard/trading-template-zb.html
 ```
 
-The ES/ZB template uses Databento CME futures data when `DATABENTO_API_KEY` is configured. It builds 20-minute candles and calculates futures technicals locally from that single feed. Yahoo is an explicitly labeled delayed backup only.
+The free ES/ZB template uses delayed Yahoo Finance futures OHLCV. It builds 20-minute candles and calculates all futures technicals locally from that single synchronized feed. Because free CME futures data is delayed, the dashboard labels it **Planning Only** and will not approve execution.
 
 - Daily ES-vs-ZB six-point selection at the 8:10 ET (ZB) and 9:20 ET (ES) checkpoints, using HTF direction, true EMA 20/50 alignment, VWAP, key-level proximity, ATR-normalized target room, and one-to-two completed five-minute closes
 - A `TRADE`, `WATCH`, `WAIT`, or `SKIP BOTH` recommendation before the detailed 100-point worksheet and institutional gate
@@ -80,7 +80,7 @@ The ES/ZB template uses Databento CME futures data when `DATABENTO_API_KEY` is c
 
 Manual confirmation is still required for custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
 
-GitHub Pages cannot run Flask, so the Pages version reads generated snapshots. The included workflow refreshes them every 15 minutes. Databento is primary for MES, ES, and ZB when its key is configured; Yahoo is used only when the explicit backup setting is enabled and is labeled delayed in the dashboard.
+GitHub Pages cannot run Flask, so the Pages version reads generated snapshots. The included workflow refreshes them every 15 minutes using the free delayed Yahoo feed. A paid Databento feed can still be selected locally with `TEMPLATE_DATA_PROVIDER=databento`, but it is not required by the public deployment.
 
 For trading-grade data:
 

@@ -18,7 +18,7 @@
       },
       "futures_prices": {
         "label": "Yahoo Finance delayed backup",
-        "role": "Single ES/ZB source for OHLCV and locally calculated indicators",
+        "role": "Free single-source ES/ZB OHLCV for planning calculations",
         "status": "fallback-delayed"
       },
       "official_macro_sources": {
@@ -84,14 +84,14 @@
       "title": "Reserve Balances with Federal Reserve Banks"
     }
   ],
-  "generated_at": "2026-08-07 16:42 UTC",
+  "generated_at": "2026-08-07 16:59 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 11.09,
-      "atr_20m": 11.09,
+      "atr_15m": 10.68,
+      "atr_20m": 10.68,
       "atr_daily": 97.55,
       "automation": {
-        "bb_position": 0.436,
+        "bb_position": 0.685,
         "chase_filter": "PASS \u2014 normal band position",
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
@@ -104,21 +104,21 @@
         "order_flow_score": null,
         "setup_status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
         "stop": null,
-        "structure_score": 9,
+        "structure_score": 7,
         "target1": null,
         "target2": null,
         "todays_bias": "Bull",
         "trade_plan_score": 0,
         "trend_pro_240_bearish_level": 7743.5,
-        "trend_pro_240_bullish_level": 7768.62,
+        "trend_pro_240_bullish_level": 7769.04,
         "trend_pro_daily_bearish_level": 7724.25,
-        "trend_pro_daily_bullish_level": 7770.75,
+        "trend_pro_daily_bullish_level": 7773.25,
         "trend_pro_result": "Bullish",
         "trend_pro_score": 15,
         "volatility_score": 5,
-        "vwap": 7768.62,
-        "vwap_distance": -8.62,
-        "vwap_position": "Below",
+        "vwap": 7769.04,
+        "vwap_distance": 4.21,
+        "vwap_position": "Above",
         "watch_levels": [
           {
             "rank": 1,
@@ -144,19 +144,19 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 7739.49,
-        "middle": 7763.0,
-        "upper": 7786.51
+        "lower": 7742.5,
+        "middle": 7764.94,
+        "upper": 7787.38
       },
       "data_status": "fresh",
       "exponential_moving_averages": {
-        "ema20": 7587.01,
-        "ema50": 7500.14
+        "ema20": 7588.27,
+        "ema50": 7500.66
       },
       "higher_timeframe_trend": "Bullish",
-      "last": 7760.0,
-      "last_candle_age_minutes": 22,
-      "last_time": "2026-08-07 16:20 UTC",
+      "last": 7773.25,
+      "last_candle_age_minutes": 19,
+      "last_time": "2026-08-07 16:40 UTC",
       "monthly_high": 7632.0,
       "monthly_low": 7324.0,
       "monthly_trend": {
@@ -164,11 +164,11 @@
         "score": 10
       },
       "moving_averages": {
-        "ma100": 7290.72,
-        "ma20": 7560.09,
-        "ma200": 7077.47,
-        "ma50": 7527.06,
-        "ma72": 7481.51
+        "ma100": 7290.86,
+        "ma20": 7560.75,
+        "ma200": 7077.54,
+        "ma50": 7527.33,
+        "ma72": 7481.7
       },
       "name": "ES",
       "opening_range_high": 7770.75,
@@ -193,11 +193,11 @@
       "selector": {
         "checks": {
           "confirmed_reaction": {
-            "evidence": "2 five-minute close(s) vs 7768.62",
+            "evidence": "2 five-minute close(s) vs 7770.75",
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 7587.01 vs EMA50 7500.14",
+            "evidence": "EMA20 7588.27 vs EMA50 7500.66",
             "pass": true
           },
           "htf_direction": {
@@ -205,16 +205,16 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: previous_day_high 7770.75; distance 10.75",
-            "pass": false
+            "evidence": "Nearest: previous_day_high 7770.75; distance 2.5",
+            "pass": true
           },
           "room_to_target": {
-            "evidence": "Next: previous_day_high 7770.75; room 10.75",
+            "evidence": "Next: overnight_high 7792.5; room 19.25",
             "pass": true
           },
           "vwap_alignment": {
-            "evidence": "Price 7760.0 vs VWAP 7768.62",
-            "pass": false
+            "evidence": "Price 7773.25 vs VWAP 7769.04",
+            "pass": true
           }
         },
         "confirmed": false,
@@ -226,11 +226,11 @@
         "pivot": 7743.25,
         "rating": "STALE",
         "ready": true,
-        "score": 3,
-        "target_room": 10.75,
-        "target_room_atr": 0.969,
-        "vwap_distance": 8.62,
-        "vwap_distance_atr": 0.777
+        "score": 5,
+        "target_room": 19.25,
+        "target_room_atr": 1.803,
+        "vwap_distance": 4.21,
+        "vwap_distance_atr": 0.394
       },
       "symbol": "ES=F",
       "trend": {
@@ -250,7 +250,7 @@
       "atr_20m": 0.13,
       "atr_daily": 0.99,
       "automation": {
-        "bb_position": 0.344,
+        "bb_position": 0.423,
         "chase_filter": "PASS \u2014 normal band position",
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
@@ -276,7 +276,7 @@
         "trend_pro_score": 15,
         "volatility_score": 3,
         "vwap": 109.54,
-        "vwap_distance": -0.1,
+        "vwap_distance": -0.04,
         "vwap_position": "Below",
         "watch_levels": [
           {
@@ -303,8 +303,8 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 109.19,
-        "middle": 109.55,
+        "lower": 109.2,
+        "middle": 109.56,
         "upper": 109.91
       },
       "data_status": "fresh",
@@ -313,9 +313,9 @@
         "ema50": 111.27
       },
       "higher_timeframe_trend": "Bearish",
-      "last": 109.44,
-      "last_candle_age_minutes": 22,
-      "last_time": "2026-08-07 16:20 UTC",
+      "last": 109.5,
+      "last_candle_age_minutes": 19,
+      "last_time": "2026-08-07 16:40 UTC",
       "monthly_high": 112.91,
       "monthly_low": 108.25,
       "monthly_trend": {
@@ -364,15 +364,15 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: pivot 109.57; distance 0.14",
+            "evidence": "Nearest: pivot 109.57; distance 0.07",
             "pass": false
           },
           "room_to_target": {
-            "evidence": "Next: previous_day_low 109.16; room 0.28",
+            "evidence": "Next: previous_day_low 109.16; room 0.34",
             "pass": true
           },
           "vwap_alignment": {
-            "evidence": "Price 109.44 vs VWAP 109.54",
+            "evidence": "Price 109.5 vs VWAP 109.54",
             "pass": true
           }
         },
@@ -386,10 +386,10 @@
         "rating": "STALE",
         "ready": true,
         "score": 5,
-        "target_room": 0.28,
-        "target_room_atr": 2.169,
-        "vwap_distance": 0.1,
-        "vwap_distance_atr": 0.788
+        "target_room": 0.34,
+        "target_room_atr": 2.704,
+        "vwap_distance": 0.04,
+        "vwap_distance_atr": 0.281
       },
       "symbol": "ZB=F",
       "trend": {
@@ -422,13 +422,13 @@
   },
   "volatility": {
     "move": null,
-    "vix": 15.07,
+    "vix": 14.96,
     "vix_status": "delayed"
   },
   "yields": {
     "10y": {
       "direction": "Down",
-      "latest": 4.66,
+      "latest": 4.65,
       "previous": 4.67,
       "symbol": "^TNX"
     },
@@ -440,7 +440,7 @@
     },
     "30y": {
       "direction": "Down",
-      "latest": 5.21,
+      "latest": 5.2,
       "previous": 5.21,
       "symbol": "^TYX"
     }

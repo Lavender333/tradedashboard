@@ -27,8 +27,8 @@ NASDAQ_HEADERS = {
 
 SOURCE_CATALOG = {
     "futures_prices": {
-        "label": "Databento CME futures data",
-        "role": "Single ES/ZB source for OHLCV and locally calculated indicators",
+        "label": "Yahoo Finance delayed futures OHLCV",
+        "role": "Free single-source ES/ZB OHLCV for planning calculations",
         "status": "dynamic",
     },
     "rates": {
@@ -49,7 +49,7 @@ SOURCE_CATALOG = {
 }
 
 DATABENTO_DATASET = os.environ.get("DATABENTO_DATASET", "GLBX.MDP3")
-FUTURES_PROVIDER = os.environ.get("TEMPLATE_DATA_PROVIDER", "databento").lower()
+FUTURES_PROVIDER = os.environ.get("TEMPLATE_DATA_PROVIDER", "yahoo").lower()
 FUTURES_SYMBOLS = {
     "ES": os.environ.get("ES_SYMBOL", "ES.c.0"),
     "ZB": os.environ.get("ZB_SYMBOL", "ZB.c.0"),
