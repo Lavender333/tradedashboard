@@ -689,7 +689,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     market_context = session_market_context(intraday)
     overnight = overnight_context(intraday, market_context)
     vwap_value = market_context["vwap"]
-    anchored_vwap = two_session_anchored_vwap(intraday)
+    anchored_vwap = two_session_anchored_vwap(intraday) if name == "ES" else None
     bands = bollinger(intraday)
     band_width = (bands["upper"] - bands["lower"]) if bands["upper"] is not None else None
     bb_position = ((current - bands["lower"]) / band_width) if band_width else None
