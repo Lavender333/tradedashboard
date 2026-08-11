@@ -531,7 +531,8 @@
       </div>
       <div class="metric">
         <div class="metric-label">Total Score</div>
-        <div class="metric-value"><span id="total-score">0</span> / 100</div>
+        <div class="metric-value"><span id="total-score">0</span> / <span id="score-denominator">90</span></div>
+        <div class="metric-note" id="score-mode">Core research · order flow unavailable</div>
       </div>
       <div class="metric">
         <div class="metric-label">Decision</div>
@@ -1049,10 +1050,10 @@
         <div class="score-row"><span>Trend /35</span><strong id="trend-score">0</strong></div>
         <div class="score-row"><span>Trend Pro /15</span><strong id="trendPro-score">0</strong></div>
         <div class="score-row"><span>Structure /10</span><strong id="structure-score">0</strong></div>
-        <div class="score-row"><span>Order Flow</span><strong id="orderFlow-score">N/A</strong></div>
+        <div class="score-row"><span>Order Flow /10</span><strong id="orderFlow-score">N/A</strong></div>
         <div class="score-row"><span>Volatility /5</span><strong id="volatility-score">0</strong></div>
         <div class="score-row"><span>Trade Plan /5</span><strong id="tradePlan-score">0</strong></div>
-        <div class="decision bad" id="decision-box">Below 70: No trade.</div>
+        <div class="decision bad" id="decision-box">Below 85%: No trade.</div>
         <div class="gate-status bad" id="final-output-box">Final Output: No Trade · Entry - · Time -</div>
 
         <div class="gate">
@@ -1082,7 +1083,7 @@
   <script src="data/template-snapshot.js"></script>
   <script src="market-selector.js"></script>
   <script>
-    const scoreGroups = ["macro", "trend", "trendPro", "structure", "volatility", "tradePlan"];
+    const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
     const storageKey = "trading-template-v1-" + selectedInstrumentKey().toLowerCase();
 
@@ -1090,7 +1091,9 @@
       const max = Number(input.max || 100);
       const min = Number(input.min || 0);
       if (input.value === "") return 0;
-      const next = Math.min(max, Math.max(min, Number(input.value || 0)));
+      const numeric = Number(input.value);
+      if (!Number.isFinite(numeric)) return 0;
+      const next = Math.min(max, Math.max(min, numeric));
       input.value = next;
       return next;
     }
@@ -1100,11 +1103,11 @@
         .reduce((sum, input) => sum + clampScore(input), 0);
     }
 
-    function decisionFor(total) {
-      if (total >= 90) return { text: "90-100: A+ setup - full-size position.", short: "A+ Setup", kind: "good" };
-      if (total >= 80) return { text: "80-89: A setup - normal position size.", short: "A Setup", kind: "good" };
-      if (total >= 70) return { text: "70-79: B setup - reduce size or wait for stronger confirmation.", short: "B Setup", kind: "warn" };
-      return { text: "Below 70: No trade.", short: "No Trade", kind: "bad" };
+    function decisionFor(percent, fullMode) {
+      if (percent >= 90 && fullMode) return { text: "90-100: A+ candidate; every hard gate must still pass.", short: "A+ Candidate", kind: "good" };
+      if (percent >= 85 && fullMode) return { text: "85-89: Live candidate; every hard gate must still pass.", short: "Live Candidate", kind: "good" };
+      if (percent >= 85) return { text: "Core score passed, but missing full live inputs: research only.", short: "Core Research", kind: "warn" };
+      return { text: "Below 85%: No trade.", short: "No Trade", kind: "bad" };
     }
 
     function updateScores() {
@@ -1115,9 +1118,23 @@
         total += capped;
         document.getElementById(`${group}-score`).textContent = capped;
       });
+      const orderFlowInput = document.querySelector('[data-auto="order-flow-score"]');
+      const context = window.templateSnapshot?.instruments?.[selectedInstrumentKey()];
+      const auto = context?.automation || {};
+      const orderFlowAvailable = Boolean(
+        auto.order_flow_connected && orderFlowInput && Number.isFinite(Number(orderFlowInput.value))
+      );
+      const fullMode = orderFlowAvailable && auto.trend_pro_source === "actual";
+      const denominator = orderFlowAvailable ? 100 : 90;
+      const percent = denominator ? (total / denominator) * 100 : 0;
+      window.professionalScore = { total, denominator, percent, fullMode };
       document.getElementById("total-score").textContent = total;
+      document.getElementById("score-denominator").textContent = denominator;
+      document.getElementById("score-mode").textContent = fullMode
+        ? "Full live mode · verified order flow required"
+        : `Core research · ${percent.toFixed(1)}% normalized · full Trend Pro/order flow unavailable`;
 
-      const decision = decisionFor(total);
+      const decision = decisionFor(percent, fullMode);
       const box = document.getElementById("decision-box");
       box.textContent = decision.text;
       box.className = "decision " + decision.kind;
@@ -1138,14 +1155,26 @@
       updateAutomatedGateChecks();
       const checks = Array.from(document.querySelectorAll(".gate-check"));
       const context = window.templateSnapshot?.instruments?.[selectedInstrumentKey()];
-      const stale = context?.data_status === "stale";
-      const passed = !stale && checks.every((check) => check.checked);
+      const auto = context?.automation || {};
+      const score = window.professionalScore || { percent: 0, fullMode: false };
+      const stale = context?.data_status !== "live" || !auto.data_quality_pass;
+      const scorePassed = score.percent >= 85;
+      const selectorPassed = Boolean(auto.selector_eligible);
+      const patternPassed = Boolean(auto.pattern_confirmed);
+      const passed = Boolean(
+        auto.execution_eligible && !stale && score.fullMode && scorePassed &&
+        selectorPassed && patternPassed && checks.every((check) => check.checked)
+      );
       const missing = gateFailureReasons(checks);
+      if (!scorePassed) missing.push("85% minimum score");
+      if (!selectorPassed) missing.push("ES market selection");
+      if (!patternPassed) missing.push("ordered breakout/retest/confirmation");
+      if (!score.fullMode) missing.push("verified order-flow score");
       const missingText = missing.length ? ` Missing: ${missing.join("; ")}.` : "";
       const box = document.getElementById("gate-box");
       box.textContent = stale
         ? "Fail: market data is stale. Default action is No Trade."
-        : passed ? "Pass: trade is allowed if score rules also agree." : `Fail: default action is No Trade.${missingText}`;
+        : passed ? "Pass: live trade eligible." : `Fail: default action is No Trade.${missingText}`;
       box.className = "gate-status " + (passed ? "good" : "bad");
       document.getElementById("gate-short").textContent = passed ? "Pass" : "Fail";
       if (!passed) {
@@ -1539,16 +1568,15 @@
     function applyFinalOutput(snapshot, context) {
       const auto = context.automation || {};
       const stale = context.data_status === "stale";
-      const direction = stale ? "No Trade" : auto.direction || "No Trade";
+      const eligible = Boolean(auto.execution_eligible) && !stale;
+      const direction = eligible ? auto.direction || "No Trade" : "No Trade";
       const esPlan = esEntryPlan(snapshot, context);
-      const entry = direction === "No Trade"
-        ? esPlan.best ? `Watch: ${esPlan.best.entry}` : "-"
-        : fmt(auto.entry);
+      const entry = eligible ? fmt(auto.entry) : "-";
       const time = stale ? "Wait for fresh market data" : timeWindowLabel(snapshot, context.name || selectedInstrumentKey());
       const note = stale
         ? "No day trade until the latest candle is fresh."
-        : direction === "No Trade"
-          ? esPlan.summary
+        : !eligible
+          ? `${auto.setup_status || esPlan.summary}. ${auto.validation_reason || "Full live gates have not passed."}`
           : `${auto.exit_plan || `Use ${auto.entry_type || "confirmed setup"} only if the gate remains valid.`}`;
       setText("final-direction", direction);
       setText("final-entry", entry);
@@ -1730,9 +1758,10 @@
     }
 
     function riskRewardPass(direction) {
-      const entry = numberFromInput("Entry");
-      const stop = numberFromInput("Stop");
-      const target = numberFromInput("Target 1");
+      const auto = window.templateSnapshot?.instruments?.[selectedInstrumentKey()]?.automation || {};
+      const entry = auto.research_entry ?? numberFromInput("Entry");
+      const stop = auto.research_stop ?? numberFromInput("Stop");
+      const target = auto.research_target2 ?? numberFromInput("Target 2");
       if (entry === null || stop === null || target === null || !direction || direction === "Both") return false;
       const risk = Math.abs(entry - stop);
       if (risk === 0) return false;
@@ -1767,9 +1796,12 @@
         setGate("htf", noApprovedDirection ? true : agrees, noApprovedDirection ? context.higher_timeframe_trend : undefined);
       }
       const trendPro = selectedTrendPro();
-      if (trendPro) {
+      const actualTrendPro = context?.automation?.trend_pro_source === "actual";
+      if (trendPro && actualTrendPro) {
         const agrees = directionAgrees(direction, trendPro);
         setGate("trend-pro", noApprovedDirection ? true : agrees, noApprovedDirection ? trendPro : undefined);
+      } else {
+        setGate("trend-pro", false, "Actual Trend Pro unavailable");
       }
       setGate("order-flow", !noApprovedDirection && directionAgrees(direction, selectedRadioText("order-flow")), noApprovedDirection ? "Waiting for confirmation" : undefined);
       setGate("risk-reward", !noApprovedDirection && riskRewardPass(direction), noApprovedDirection ? "Waiting for setup" : undefined);
@@ -1845,7 +1877,14 @@
         setAutoChecked(`${prefix}-up`, direction === "Up");
         setAutoChecked(`${prefix}-down`, direction === "Down");
       });
-      setAutoValue("macro-rates-score", snapshot.rate_context?.score ?? "");
+      const direction = selectedDirection();
+      const rateResult = snapshot.rate_context?.result;
+      const directionalScore = !direction || direction === "No Trade"
+        ? 0
+        : rateResult === "Neutral"
+          ? 3
+          : directionAgrees(direction, rateResult) ? 5 : 1;
+      setAutoValue("macro-rates-score", directionalScore);
     }
 
     function applyTemplateSnapshot(snapshot) {
@@ -1887,8 +1926,8 @@
         `Auto: ${context.monthly_trend.result}`;
 
       const auto = context.automation || {};
-      window.autoDirection = auto.direction || "No Trade";
-      window.autoTrendPro = auto.trend_pro_result || context.higher_timeframe_trend;
+      window.autoDirection = auto.research_direction || auto.direction || "No Trade";
+      window.autoTrendPro = auto.trend_pro_source === "actual" ? auto.trend_pro_result : "Unavailable";
       const macroNews = macroResultFromNews(snapshot);
       setRadio("macro-result", macroNews.result);
       setReadout("macro-result", `${macroNews.result} news risk`);
@@ -1904,13 +1943,14 @@
 
       applyYields(snapshot);
       applyMovingAverages(context);
-      setAutoValue("daily-trend-score", context.trend.score);
-      setAutoValue("weekly-trend-score", context.weekly_trend.score);
+      const professionalTrend = auto.professional_trend_scores || {};
+      setAutoValue("daily-trend-score", professionalTrend.daily ?? 0);
+      setAutoValue("weekly-trend-score", professionalTrend.weekly ?? 0);
       setAutoValue("weekly-high", fmt(context.weekly_high));
       setAutoValue("weekly-low", fmt(context.weekly_low));
       setAutoChecked("above-weekly-high", context.last > context.weekly_high);
       setAutoChecked("below-weekly-low", context.last < context.weekly_low);
-      setAutoValue("monthly-trend-score", context.monthly_trend.score);
+      setAutoValue("monthly-trend-score", professionalTrend.monthly ?? 0);
       setAutoValue("monthly-high", fmt(context.monthly_high));
       setAutoValue("monthly-low", fmt(context.monthly_low));
       setAutoValue("current-price", `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider} · ${context.contract_selection?.mode || "provider contract"}`);

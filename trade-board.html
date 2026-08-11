@@ -58,7 +58,7 @@
   </header>
   <div class="sourcebar" id="sourcebar"><span><i class="dot"></i>Loading market snapshot…</span></div>
   <section class="board" id="board"></section>
-  <p class="footnote"><strong>ES V3:</strong> 9:30 AM–2:00 PM ET; opening-range or overnight breakout/retest only; long BB position 0.60–0.75; structural risk 0.45–1.0 ATR; confirmation body no larger than 0.35 ATR. The locked 451-session QuantConnect validation failed (44 trades, −7.001R, 0.735 profit factor), so signals are research-only and must not be used for automatic execution. This board does not place orders.</p>
+  <p class="footnote"><strong>ES Professional V1:</strong> 10:00 AM–2:00 PM ET; ordered breakout, later retest, and completed confirmation; structural risk 0.45–1.0 ATR and at least six points; modeled costs no more than 0.10R. The linked 451-session report tested only the older ES V3 execution subset—not this full template—and failed. Professional V1 remains core research until actual Trend Pro, verified order flow, an 85/100 score, and every hard gate pass. This board does not place orders.</p>
 </main>
 <script>
   const $ = (selector) => document.querySelector(selector);
@@ -75,18 +75,19 @@
 
   function card(name, item) {
     const auto = item.automation || {};
-    const confirmed = Boolean(auto.setup_confirmed);
+    const confirmed = Boolean(auto.execution_eligible);
+    const patternConfirmed = Boolean(auto.pattern_confirmed);
     const quality = Boolean(auto.data_quality_pass);
-    const statusClass = confirmed ? 'good' : quality ? 'wait' : 'bad';
-    const status = confirmed ? `${auto.direction || 'TRADE'} CONFIRMED` : quality ? auto.setup_status : 'NO TRADE';
+    const statusClass = confirmed ? 'good' : patternConfirmed ? 'wait' : quality ? 'wait' : 'bad';
+    const status = confirmed ? `${auto.direction || 'TRADE'} ELIGIBLE` : patternConfirmed ? 'CORE RESEARCH — NO EXECUTION' : quality ? auto.setup_status : 'NO TRADE';
     const contract = item.contract_selection?.symbol || item.symbol || name;
     const liveAge = currentAgeMinutes(item.last_time, item.last_candle_age_minutes);
     const watches = (auto.watch_levels || []).slice(0,3).map(w => `<div class="watchrow"><span>#${esc(w.rank)} ${esc(w.setup)}</span><strong>${fmt(w.watch_level)}</strong></div>`).join('') || '<div class="muted">No watch levels available.</div>';
     return `<article class="card ${quality ? 'live' : ''}">
       <div class="cardhead"><div><div class="instrument">${esc(name)}</div><div class="contract">Contract ${esc(contract)} · ${esc(item.price_source)}</div></div><div class="price">${fmt(item.last)}<time>Price time ${esc(item.last_time_et)}</time></div></div>
       <div class="decision">
-        <div class="label">Final decision · ${esc(auto.engine_version || (name === 'ES' ? 'ES V3' : 'ZB V2'))}</div><div class="status ${statusClass}">${esc(status)}</div><div class="setup">${esc(auto.setup || auto.data_quality_reason || 'Waiting for current information')}</div>
-        <div class="steps"><div class="step">Breakout<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">Retest<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">5m close<strong>${confirmed ? '✓' : 'WAIT'}</strong></div></div>
+        <div class="label">Final decision · ${esc(auto.engine_version || (name === 'ES' ? 'ES PRO V1' : 'ZB V2'))}</div><div class="status ${statusClass}">${esc(status)}</div><div class="setup">${esc(auto.setup_status || auto.data_quality_reason || 'Waiting for current information')}</div>
+        <div class="steps"><div class="step">Breakout<strong>${patternConfirmed ? '✓' : 'WAIT'}</strong></div><div class="step">Retest<strong>${patternConfirmed ? '✓' : 'WAIT'}</strong></div><div class="step">5m close<strong>${patternConfirmed ? '✓' : 'WAIT'}</strong></div></div>
         <div class="levels"><div class="level"><span class="label">Entry</span><b>${fmt(auto.entry)}</b></div><div class="level"><span class="label">Stop</span><b>${fmt(auto.stop)}</b></div><div class="level"><span class="label">Target 1</span><b>${fmt(auto.target1)}</b></div><div class="level"><span class="label">Target 2</span><b>${fmt(auto.target2)}</b></div></div>
         <div class="watch"><div class="label">Ranked watch levels — not entries</div>${watches}</div>
         <div class="checks"><div class="check"><span>Bias</span>${esc(auto.todays_bias || item.higher_timeframe_trend)}</div><div class="check"><span>20m ATR(14)</span>${fmt(item.atr_20m)}</div><div class="check"><span>VWAP</span>${auto.vwap == null ? esc(auto.vwap_position || 'Not ready') : `${fmt(auto.vwap)} · ${esc(auto.vwap_position)}`}</div><div class="check"><span>BB position</span>${val(auto.bb_position)}</div><div class="check"><span>Chase filter</span>${esc(auto.chase_filter)}</div><div class="check"><span>Data gate</span>${quality ? 'PASS' : esc(auto.data_quality_reason)}</div><div class="check"><span>Data age now</span>${esc(liveAge)} min</div></div>

@@ -570,7 +570,7 @@ def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: fl
 def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], rows: List[Dict], atr_value, bb_position, generated_at: datetime, data_quality_pass: bool) -> Dict:
     pending = {
         "confirmed": False,
-        "engine_version": "ES V3" if name == "ES" else "ZB V2",
+        "engine_version": "ES PRO V1" if name == "ES" else "ZB V2",
         "direction": "No Trade",
         "status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
         "entry": None,
@@ -603,20 +603,18 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
     if name == "ES":
         confirmation_et = confirmation_bar["time"].astimezone(ZoneInfo("America/New_York"))
         confirmation_minutes = confirmation_et.hour * 60 + confirmation_et.minute
-        if confirmation_minutes < 9 * 60 + 30 or confirmation_minutes >= 14 * 60:
-            pending["status"] = "ES V3 SKIP — OUTSIDE 9:30 AM–2:00 PM ET"
+        if confirmation_minutes < 10 * 60 or confirmation_minutes >= 14 * 60:
+            pending["status"] = "ES PRO SKIP — OUTSIDE 10:00 AM–2:00 PM ET"
             return pending
         confirmation_body_atr = abs(confirmation_bar["close"] - confirmation_bar["open"]) / float(atr_value)
         if confirmation_body_atr > 0.35:
-            pending["status"] = "ES V3 SKIP — CONFIRMATION CANDLE CHASE (>0.35 ATR)"
+            pending["status"] = "ES PRO SKIP — CONFIRMATION CANDLE CHASE (>0.35 ATR)"
             return pending
         if long_side and (bb_position is None or bb_position < 0.60 or bb_position > 0.75):
-            pending["status"] = "ES V3 SKIP — LONG BB LOCATION MUST BE 0.60–0.75"
+            pending["status"] = "ES PRO SKIP — LONG BB LOCATION MUST BE 0.60–0.75"
             return pending
 
     for watch in watch_levels:
-        if name == "ES" and not watch["setup"].startswith(("Opening Range", "Overnight")):
-            continue
         level = float(watch["watch_level"])
         if long_side:
             candle_confirmed = confirmation_bar["close"] > level and confirmation_bar["close"] > confirmation_bar["open"]
@@ -659,8 +657,15 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
             minimum_atr_risk = 0.45 if name == "ES" else 0.25
             if risk <= 0 or atr_ratio < minimum_atr_risk or atr_ratio > 1.0 or chase_failed:
                 if name == "ES" and risk > 0 and atr_ratio < minimum_atr_risk:
-                    pending["status"] = "ES V3 SKIP — STRUCTURAL STOP TOO TIGHT (<0.45 ATR)"
+                    pending["status"] = "ES PRO SKIP — STRUCTURAL STOP TOO TIGHT (<0.45 ATR)"
                 continue
+            if name == "ES":
+                # $5 round turn plus one ES tick each way is $30/contract.
+                # Six points keeps that modeled cost at or below 0.10R.
+                transaction_cost_r = 0.60 / risk
+                if risk < 6.0 or transaction_cost_r > 0.10:
+                    pending["status"] = "ES PRO SKIP — COST TOO LARGE RELATIVE TO STOP"
+                    continue
             target1 = entry + risk if long_side else entry - risk
             target2 = entry + 2 * risk if long_side else entry - 2 * risk
             direction = "Long Only" if long_side else "Short Only"
@@ -676,7 +681,8 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
                 "target2": round_price(target2),
                 "risk_points": round_price(risk),
                 "atr_risk_ratio": round(atr_ratio, 3),
-                "engine_version": "ES V3" if name == "ES" else "ZB V2",
+                "transaction_cost_r": round(0.60 / risk, 3) if name == "ES" else None,
+                "engine_version": "ES PRO V1" if name == "ES" else "ZB V2",
                 "rr1": 1.0,
                 "rr2": 2.0,
                 "confirmation_time": confirmation_bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
@@ -988,6 +994,33 @@ def choose_market(instruments: Dict[str, Dict]) -> Dict:
     }
 
 
+def professional_trend_scores(price: float, averages: Dict[str, float], weekly_range: Dict, monthly_range: Dict, direction: str) -> Dict:
+    """Symmetric long/short scores for the Professional ES 35-point trend section."""
+    long_side = direction == "Long Only"
+    short_side = direction == "Short Only"
+    aligned = sum(
+        1 for value in averages.values()
+        if value is not None and ((long_side and price > value) or (short_side and price < value))
+    ) if long_side or short_side else 0
+    daily_points = {5: 15, 4: 12, 3: 9, 2: 6}.get(aligned, 0)
+
+    def range_points(bounds: Dict) -> int:
+        high, low = float(bounds["high"]), float(bounds["low"])
+        midpoint = (high + low) / 2
+        if long_side:
+            return 10 if price > high else 6 if price >= midpoint else 0
+        if short_side:
+            return 10 if price < low else 6 if price <= midpoint else 0
+        return 0
+
+    return {
+        "daily": daily_points,
+        "weekly": range_points(weekly_range),
+        "monthly": range_points(monthly_range),
+        "aligned_daily_averages": aligned,
+    }
+
+
 def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix=None) -> Dict:
     daily, intraday, five_minute, symbol = futures_history(name)
     closes = [row["close"] for row in daily]
@@ -1042,11 +1075,6 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     market_hours_pass = now_et.weekday() < 5 and 9 * 60 + 30 <= now_minutes < 16 * 60
     data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready and market_hours_pass
     watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
-    if name == "ES":
-        watch_levels = [
-            watch for watch in watch_levels
-            if watch["setup"].startswith(("Opening Range", "Overnight"))
-        ]
     trade_setup = confirmed_trade_setup(
         name, htf_result, watch_levels, five_minute, intraday_atr, bb_position, generated_at, data_quality_pass
     )
@@ -1070,35 +1098,71 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         five_minute,
         data_quality_pass,
     )
+    proposed_direction = trade_setup["direction"] if trade_setup["confirmed"] else decision["direction"]
+    trend_points = professional_trend_scores(
+        current, averages, weekly_range, monthly_range, proposed_direction
+    )
+    long_proposal = proposed_direction == "Long Only"
+    short_proposal = proposed_direction == "Short Only"
+    vwap_aligned = vwap_value is not None and (
+        (long_proposal and current > vwap_value) or (short_proposal and current < vwap_value)
+    )
+    anchored_aligned = anchored_vwap is not None and (
+        (long_proposal and current > anchored_vwap) or (short_proposal and current < anchored_vwap)
+    )
+    professional_structure_score = (
+        2 + 2 + 2 + 1
+        + (2 if vwap_aligned else 0)
+        + (1 if anchored_aligned else 0)
+    ) if trade_setup["confirmed"] else 0
+    pattern_status = trade_setup["status"]
+    if trade_setup["confirmed"]:
+        pattern_status = "CORE RESEARCH SIGNAL — FULL LIVE GATES NOT AVAILABLE"
+    professional_es = name == "ES"
     auto = {
         "engine_version": trade_setup["engine_version"],
-        "direction": decision["direction"],
+        "direction": "No Trade" if professional_es else decision["direction"],
+        "research_direction": proposed_direction,
         "delta_result": "Mixed",
         "entry_type": trade_setup.get("setup") or "Watch Zone → Trigger → Actual Entry",
-        "entry": trade_setup["entry"],
-        "stop": trade_setup["stop"],
-        "target1": trade_setup["target1"],
-        "target2": trade_setup["target2"],
-        "risk_points": trade_setup["risk_points"],
-        "rr1": trade_setup["rr1"],
-        "rr2": trade_setup["rr2"],
-        "exit_plan": trade_setup["exit_plan"],
+        "entry": None if professional_es else trade_setup["entry"],
+        "stop": None if professional_es else trade_setup["stop"],
+        "target1": None if professional_es else trade_setup["target1"],
+        "target2": None if professional_es else trade_setup["target2"],
+        "risk_points": None if professional_es else trade_setup["risk_points"],
+        "rr1": None if professional_es else trade_setup["rr1"],
+        "rr2": None if professional_es else trade_setup["rr2"],
+        "exit_plan": "No executable position. Full live gates are not connected." if professional_es else trade_setup["exit_plan"],
+        "research_entry": trade_setup["entry"],
+        "research_stop": trade_setup["stop"],
+        "research_target1": trade_setup["target1"],
+        "research_target2": trade_setup["target2"],
+        "research_risk_points": trade_setup["risk_points"],
+        "research_rr1": trade_setup["rr1"],
+        "research_rr2": trade_setup["rr2"],
         "confirmation_time": trade_setup.get("confirmation_time"),
-        "setup_confirmed": trade_setup["confirmed"],
-        "setup_status": trade_setup["status"],
+        "pattern_confirmed": trade_setup["confirmed"],
+        "setup_confirmed": False if professional_es else trade_setup["confirmed"],
+        "execution_eligible": False if professional_es else trade_setup["confirmed"],
+        "strategy_mode": "CORE RESEARCH" if professional_es else "ZB V2",
+        "validation_reason": "Actual Trend Pro and verified order flow are unavailable; full 100-point gate cannot pass." if professional_es else "",
+        "setup_status": pattern_status if professional_es else trade_setup["status"],
         "watch_levels": watch_levels,
         "liquidity_shift": "N/A — order-flow feed not connected",
         "order_flow_result": "Not Connected",
         "order_flow_score": None,
+        "order_flow_connected": False,
         "todays_bias": decision["todays_bias"],
         "trade_plan_score": decision["trade_plan_score"],
         "trend_pro_daily_bullish_level": round_price(max(current, prev_day["high"])),
         "trend_pro_daily_bearish_level": round_price(min(current, prev_day["low"])),
         "trend_pro_240_bullish_level": structure["vwap"] or round_price(max(row["high"] for row in intraday[-16:])),
         "trend_pro_240_bearish_level": round_price(min(row["low"] for row in intraday[-16:])),
-        "trend_pro_result": htf_result,
-        "trend_pro_score": 15 if htf_result != "Neutral" else 7,
-        "structure_score": structure["score"],
+        "trend_pro_result": "Unavailable" if professional_es else htf_result,
+        "trend_pro_source": "unavailable" if professional_es else "proxy",
+        "trend_pro_score": 0 if professional_es else (15 if htf_result != "Neutral" else 7),
+        "professional_trend_scores": trend_points,
+        "structure_score": professional_structure_score,
         "volatility_score": volatility_score(name, vix, daily_atr),
         "vwap": structure["vwap"],
         "vwap_position": structure["vwap_position"],
@@ -1333,6 +1397,23 @@ def safe_build() -> Dict:
             "ZB": instrument_snapshot("ZB", rate_context["result"], generated_at_dt, volatility["vix"]),
         }
         selection = choose_market(instruments)
+        for instrument_name, instrument in instruments.items():
+            auto = instrument["automation"]
+            selector_eligible = (
+                selection.get("market") == instrument_name
+                and selection.get("decision") == f"TRADE {instrument_name}"
+            )
+            auto["selector_eligible"] = selector_eligible
+            if auto.get("pattern_confirmed") and not selector_eligible:
+                auto["setup_status"] = "CORE RESEARCH SKIP — MARKET SELECTOR DID NOT CHOOSE THIS INSTRUMENT"
+            auto["hard_gates"] = {
+                "data_quality": bool(auto.get("data_quality_pass")),
+                "market_selection": selector_eligible,
+                "pattern_confirmation": bool(auto.get("pattern_confirmed")),
+                "actual_trend_pro": auto.get("trend_pro_source") == "actual",
+                "verified_order_flow": bool(auto.get("order_flow_connected")),
+                "risk_reward_2r": bool(auto.get("research_rr2") and auto["research_rr2"] >= 2),
+            }
         return {
             "generated_at": generated_at,
             "provider": ACTIVE_FUTURES_SOURCE,
