@@ -3,3 +3,4 @@ pandas
 colorama
 Flask
 databento
+webull-openapi-python-sdk

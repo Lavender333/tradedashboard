@@ -62,7 +62,14 @@ https://lavender333.github.io/tradedashboard/trading-template-es.html
 https://lavender333.github.io/tradedashboard/trading-template-zb.html
 ```
 
-The free ES/ZB template uses delayed Yahoo Finance futures OHLCV. It builds 20-minute candles and calculates all futures technicals locally from that single synchronized feed. Because free CME futures data is delayed, the dashboard labels it **Planning Only** and will not approve execution.
+The ES/ZB template prefers Webull OpenAPI futures data. It uses the exact futures contracts configured in `WEBULL_ES_SYMBOL` and `WEBULL_ZB_SYMBOL`, builds 20-minute candles, and calculates all technicals locally from that single synchronized feed. If Webull is unavailable, Yahoo is an explicitly labeled delayed planning fallback and execution remains blocked.
+
+Webull setup:
+
+1. Enable Webull OpenAPI and purchase the separate OpenAPI futures market-data subscription.
+2. Add repository secrets `WEBULL_APP_KEY` and `WEBULL_APP_SECRET`.
+3. Add repository variables `WEBULL_ES_SYMBOL` and `WEBULL_ZB_SYMBOL` using the active contract codes, for example `ESU6` and `ZBU6` for September 2026.
+4. Update both contract variables at rollover. The dashboard displays the exact configured contract beside the current price.
 
 The displayed current price always includes its provider symbol, Eastern timestamp, source, delay status, and age. Five-minute feed bars drive the displayed price and confirmation checks; 20-minute bars drive ATR and Bollinger calculations. RTH VWAP begins at 9:30 a.m. ET, the opening range completes at 10:00 a.m. ET, and overnight levels use only the current CME trade date.
 

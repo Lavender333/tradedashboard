@@ -27,8 +27,8 @@ NASDAQ_HEADERS = {
 
 SOURCE_CATALOG = {
     "futures_prices": {
-        "label": "Yahoo Finance delayed futures OHLCV",
-        "role": "Free single-source ES/ZB OHLCV for planning calculations",
+        "label": "Webull OpenAPI CME futures data",
+        "role": "Single-source ES/ZB OHLCV for day-trading calculations",
         "status": "dynamic",
     },
     "rates": {
@@ -55,7 +55,12 @@ FUTURES_SYMBOLS = {
     "ZB": os.environ.get("ZB_SYMBOL", "ZB.c.0"),
 }
 YAHOO_FALLBACK_SYMBOLS = {"ES": "ES=F", "ZB": "ZB=F"}
+WEBULL_SYMBOLS = {
+    "ES": os.environ.get("WEBULL_ES_SYMBOL", ""),
+    "ZB": os.environ.get("WEBULL_ZB_SYMBOL", ""),
+}
 ACTIVE_FUTURES_SOURCE = ""
+WEBULL_DATA_CLIENT = None
 
 OFFICIAL_EVENT_SOURCES = [
     (re.compile(r"\b(jolts|job openings|payroll|nonfarm|nfp|unemployment|cpi|ppi|claims)\b", re.I), "BLS", "https://www.bls.gov/"),
@@ -151,6 +156,68 @@ def databento_candles(symbol: str, start: datetime, schema: str = "ohlcv-1m") ->
     return rows
 
 
+def webull_client():
+    global WEBULL_DATA_CLIENT
+    if WEBULL_DATA_CLIENT is not None:
+        return WEBULL_DATA_CLIENT
+    app_key = os.environ.get("WEBULL_APP_KEY")
+    app_secret = os.environ.get("WEBULL_APP_SECRET")
+    if not app_key or not app_secret:
+        raise RuntimeError("WEBULL_APP_KEY and WEBULL_APP_SECRET are required")
+    try:
+        from webull.core.client import ApiClient
+        from webull.data.data_client import DataClient
+    except ImportError as exc:
+        raise RuntimeError("Install webull-openapi-python-sdk") from exc
+    region = os.environ.get("WEBULL_REGION", "us")
+    client = ApiClient(app_key, app_secret, region)
+    client.add_endpoint(region, os.environ.get("WEBULL_API_ENDPOINT", "https://api.webull.com"))
+    token_dir = os.environ.get("WEBULL_OPENAPI_TOKEN_DIR")
+    if token_dir:
+        client.set_token_dir(token_dir)
+    WEBULL_DATA_CLIENT = DataClient(client)
+    return WEBULL_DATA_CLIENT
+
+
+def parse_webull_time(value: str) -> datetime:
+    normalized = str(value).strip().replace("Z", "+00:00")
+    if re.search(r"[+-]\d{4}$", normalized):
+        normalized = normalized[:-5] + normalized[-5:-2] + ":" + normalized[-2:]
+    return datetime.fromisoformat(normalized).astimezone(timezone.utc)
+
+
+def webull_candles(symbol: str, timespan: str, count: int) -> List[Dict]:
+    if not symbol:
+        raise RuntimeError("Set the exact WEBULL_ES_SYMBOL and WEBULL_ZB_SYMBOL contract codes")
+    try:
+        from webull.data.common.category import Category
+    except ImportError as exc:
+        raise RuntimeError("Install webull-openapi-python-sdk") from exc
+    response = webull_client().futures_market_data.get_futures_history_bars(
+        symbol,
+        Category.US_FUTURES.name,
+        timespan,
+        count=str(count),
+        real_time_required="Y",
+    )
+    if response.status_code != 200:
+        raise RuntimeError(f"Webull futures bars failed ({response.status_code}): {response.text[:300]}")
+    payload = response.json()
+    instruments = payload.get("result") or []
+    bar_rows = instruments[0].get("result") if instruments else []
+    rows = [{
+        "time": parse_webull_time(bar["time"]),
+        "open": float(bar["open"]),
+        "high": float(bar["high"]),
+        "low": float(bar["low"]),
+        "close": float(bar["close"]),
+        "volume": float(bar.get("volume") or 0),
+    } for bar in bar_rows if all(bar.get(key) is not None for key in ("time", "open", "high", "low", "close"))]
+    if not rows:
+        raise RuntimeError(f"{symbol}: Webull returned no usable futures bars")
+    return sorted(rows, key=lambda row: row["time"])
+
+
 def aggregate_candles(rows: List[Dict], minutes: int = 20) -> List[Dict]:
     buckets = {}
     for row in rows:
@@ -167,6 +234,16 @@ def aggregate_candles(rows: List[Dict], minutes: int = 20) -> List[Dict]:
 
 def futures_history(name: str) -> tuple[List[Dict], List[Dict], List[Dict], str]:
     global ACTIVE_FUTURES_SOURCE
+    if FUTURES_PROVIDER == "webull":
+        try:
+            symbol = WEBULL_SYMBOLS[name]
+            five_minute = webull_candles(symbol, "M5", 1200)
+            daily = webull_candles(symbol, "D", 370)
+            ACTIVE_FUTURES_SOURCE = "Webull OpenAPI real-time CME futures"
+            return daily, aggregate_candles(five_minute, 20), five_minute, symbol
+        except Exception:
+            if os.environ.get("ALLOW_YAHOO_FALLBACK", "true").lower() != "true":
+                raise
     if FUTURES_PROVIDER == "databento":
         try:
             symbol = FUTURES_SYMBOLS[name]
@@ -708,7 +785,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     daily_atr = atr(daily)
     last_time = five_minute[-1]["time"]
     age_minutes = max(0, int((generated_at - last_time).total_seconds() // 60))
-    source_live = ACTIVE_FUTURES_SOURCE.startswith("Databento")
+    source_live = ACTIVE_FUTURES_SOURCE.startswith(("Webull", "Databento"))
     data_status = "live" if source_live and age_minutes <= 7 else "delayed" if age_minutes <= 30 else "stale"
     market_context = session_market_context(five_minute)
     overnight = overnight_context(five_minute, market_context)

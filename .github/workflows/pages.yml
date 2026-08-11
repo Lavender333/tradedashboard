@@ -43,7 +43,12 @@ jobs:
 
       - name: Build template automation snapshot
         env:
-          TEMPLATE_DATA_PROVIDER: yahoo
+          TEMPLATE_DATA_PROVIDER: webull
+          WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
+          WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
+          WEBULL_ES_SYMBOL: ${{ vars.WEBULL_ES_SYMBOL }}
+          WEBULL_ZB_SYMBOL: ${{ vars.WEBULL_ZB_SYMBOL }}
+          ALLOW_YAHOO_FALLBACK: "true"
         run: python scripts/build_template_snapshot.py
 
       - name: Prepare static site
