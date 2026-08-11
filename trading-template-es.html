@@ -2020,7 +2020,18 @@
       }
     }
 
-    async function loadAutomation() {
+    let automationRefreshInFlight = false;
+    let loadedAutomationTimestamp = null;
+
+    async function loadAutomation(manual = false) {
+      if (automationRefreshInFlight) return;
+      automationRefreshInFlight = true;
+      const button = document.getElementById("refresh-auto-btn");
+      const previousSnapshot = window.templateSnapshot;
+      if (manual) {
+        button.disabled = true;
+        button.textContent = "Refreshing…";
+      }
       try {
         document.getElementById("auto-status").textContent = "Refreshing...";
         document.getElementById("auto-generated").textContent = "Requesting latest market snapshot.";
@@ -2033,19 +2044,38 @@
         if (!Array.isArray(snapshot.economic_calendar)) {
           snapshot.economic_calendar = economicCalendar;
         }
+        const changed = loadedAutomationTimestamp !== null && loadedAutomationTimestamp !== snapshot.generated_at;
+        loadedAutomationTimestamp = snapshot.generated_at;
         window.templateSnapshot = snapshot;
         applyTemplateSnapshot(snapshot);
+        const checkedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+        const generatedText = document.getElementById("auto-generated").textContent;
+        const refreshMessage = manual
+          ? changed ? "New snapshot loaded" : "Already showing the latest published snapshot"
+          : "Automatic check complete";
+        document.getElementById("auto-generated").textContent = `${generatedText} · ${refreshMessage} · checked ${checkedAt}`;
+        if (manual) {
+          button.textContent = changed ? "New data loaded ✓" : "Latest checked ✓";
+          window.setTimeout(() => { button.textContent = "Refresh Auto Data"; }, 1800);
+        }
       } catch (error) {
-        const fallback = window.templateSnapshotFallback;
-        if (fallback) {
+        const fallback = previousSnapshot || window.templateSnapshotFallback;
+        if (fallback && !previousSnapshot) {
           window.templateSnapshot = fallback;
           applyTemplateSnapshot(fallback);
           document.getElementById("auto-generated").textContent =
             "Hosted refresh unavailable; using bundled snapshot.";
+        } else if (previousSnapshot) {
+          document.getElementById("auto-status").textContent = "Refresh failed — prior snapshot retained";
+          document.getElementById("auto-generated").textContent = error.message;
         } else {
           document.getElementById("auto-status").textContent = "Unavailable";
           document.getElementById("auto-generated").textContent = error.message;
         }
+        if (manual) button.textContent = "Refresh failed — retry";
+      } finally {
+        automationRefreshInFlight = false;
+        if (manual) button.disabled = false;
       }
     }
 
@@ -2117,7 +2147,7 @@
       if (window.templateSnapshot) applyTemplateSnapshot(window.templateSnapshot);
     });
 
-    document.getElementById("refresh-auto-btn").addEventListener("click", loadAutomation);
+    document.getElementById("refresh-auto-btn").addEventListener("click", () => loadAutomation(true));
     document.getElementById("instrument")?.addEventListener("change", () => {
       if (window.templateSnapshot) applyTemplateSnapshot(window.templateSnapshot);
     });
@@ -2126,6 +2156,7 @@
     lockAutomatedControls();
     updateScores();
     loadAutomation();
+    window.setInterval(() => loadAutomation(false), 60000);
     setInterval(loadAutomation, 60000);
   </script>
 </body>

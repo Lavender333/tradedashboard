@@ -96,8 +96,11 @@
   }
 
   let loadedSnapshot = null;
+  let refreshInFlight = false;
 
   async function load(manual = false) {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
     const button = $('#refresh');
     if (manual) {
       button.disabled = true;
@@ -123,9 +126,14 @@
         window.setTimeout(() => { button.textContent = 'Refresh now'; }, 1500);
       }
     } catch (error) {
-      $('#board').innerHTML = `<div class="error">Could not load the decision board: ${esc(error.message)}</div>`;
+      if (!loadedSnapshot) {
+        $('#board').innerHTML = `<div class="error">Could not load the decision board: ${esc(error.message)}</div>`;
+      }
+      const checkedAt = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit', second:'2-digit'});
+      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:var(--red)"></i>Refresh failed — prior snapshot retained</span><span>${esc(error.message)}</span><span>checked ${esc(checkedAt)}</span>`;
       if (manual) button.textContent = 'Refresh failed — retry';
     } finally {
+      refreshInFlight = false;
       if (manual) button.disabled = false;
     }
   }
