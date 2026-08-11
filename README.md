@@ -75,6 +75,8 @@ Webull setup:
 
 The displayed current price always includes its provider symbol, Eastern timestamp, source, delay status, and age. Five-minute feed bars drive the displayed price and confirmation checks; 20-minute bars drive ATR and Bollinger calculations. RTH VWAP begins at 9:30 a.m. ET, the opening range completes at 10:00 a.m. ET, and overnight levels use only the current CME trade date.
 
+The complete Professional ES template is defined in [ES_PRO_TEMPLATE_RULES_V1.md](ES_PRO_TEMPLATE_RULES_V1.md). That specification separates the full 100-point live model from the 90-point historical core so unavailable Trend Pro or order-flow data cannot be silently counted as a passing backtest input.
+
 When live Webull data passes the quality gate, the execution engine waits for a completed five-minute breakout, subsequent retest, and confirming candle. It then publishes the confirmation close as the direct entry, a stop beyond the retest structure, Target 1 at 1R, Target 2 at 2R, and explicit exit instructions. Stops below 0.25 ATR or above 1.0 ATR and Bollinger chase conditions are rejected. Delayed fallback data can never publish an executable trade.
 
 Executable signals are limited to Monday–Friday, 9:30 a.m.–4:00 p.m. ET. GitHub requests a new Webull snapshot every five minutes and an open dashboard checks for a newly deployed snapshot every minute. GitHub-hosted schedules and deployments can run late, so the displayed source timestamp and age remain authoritative; snapshots older than seven minutes cannot confirm a trade.
