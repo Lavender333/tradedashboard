@@ -32,23 +32,24 @@ window.templateSnapshotFallback = {
     "summary": "ES/ZB: Yahoo Finance delayed backup; all futures technicals calculated locally from that feed. VIX and Treasury yields are delayed context. Macro events are tagged to official sources."
   },
   "economic_calendar": [],
-  "generated_at": "2026-08-11 05:04 UTC",
+  "generated_at": "2026-08-11 11:26 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 4.45124,
-      "atr_20m": 4.45124,
-      "atr_daily": 88.07707,
+      "atr_15m": 5.52282,
+      "atr_20m": 5.52282,
+      "atr_daily": 88.54136,
       "automation": {
-        "anchored_vwap_2day": 7779.37782,
-        "anchored_vwap_2day_distance": 7.62218,
+        "anchored_vwap_2day": 7779.47381,
+        "anchored_vwap_2day_distance": 14.27619,
         "anchored_vwap_2day_position": "Above",
-        "bb_position": 0.82,
-        "chase_filter": "PASS \u2014 normal band position",
+        "bb_position": 1.14,
+        "chase_filter": "LONG CHASE \u2014 wait for pullback/retest",
         "confirmation_time": null,
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
         "delta_result": "Mixed",
         "direction": "No Trade",
+        "engine_version": "ES V3",
         "entry": null,
         "entry_type": "Watch Zone \u2192 Trigger \u2192 Actual Entry",
         "exit_plan": "No position. Wait for confirmation.",
@@ -67,8 +68,8 @@ window.templateSnapshotFallback = {
         "target2": null,
         "todays_bias": "Bull",
         "trade_plan_score": 0,
-        "trend_pro_240_bearish_level": 7766.5,
-        "trend_pro_240_bullish_level": 7789.5,
+        "trend_pro_240_bearish_level": 7770.0,
+        "trend_pro_240_bullish_level": 7796.0,
         "trend_pro_daily_bearish_level": 7763.0,
         "trend_pro_daily_bullish_level": 7798.0,
         "trend_pro_result": "Bullish",
@@ -83,21 +84,14 @@ window.templateSnapshotFallback = {
             "setup": "Overnight High Breakout Retest",
             "status": "WAITING FOR CONFIRMATION",
             "trigger": "5m acceptance above, retest, then reclaim",
-            "watch_level": 7789.5
-          },
-          {
-            "rank": 2,
-            "setup": "Previous Day Low Rejection",
-            "status": "WAITING FOR CONFIRMATION",
-            "trigger": "sweep and completed 5m reclaim",
-            "watch_level": 7763.0
+            "watch_level": 7796.0
           }
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 7767.432,
+        "lower": 7768.12698,
         "middle": 7779.3625,
-        "upper": 7791.293
+        "upper": 7790.59802
       },
       "contract_selection": {
         "mode": "Yahoo continuous fallback",
@@ -106,14 +100,14 @@ window.templateSnapshotFallback = {
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
-        "ema20": 7623.94489,
-        "ema50": 7522.52455
+        "ema20": 7624.58775,
+        "ema50": 7522.78925
       },
       "higher_timeframe_trend": "Bullish",
-      "last": 7787.0,
-      "last_candle_age_minutes": 9,
-      "last_time": "2026-08-11 04:54 UTC",
-      "last_time_et": "2026-08-11 12:54 AM ET",
+      "last": 7793.75,
+      "last_candle_age_minutes": 10,
+      "last_time": "2026-08-11 11:16 UTC",
+      "last_time_et": "2026-08-11 7:16 AM ET",
       "monthly_high": 7632.0,
       "monthly_low": 7324.0,
       "monthly_trend": {
@@ -121,11 +115,11 @@ window.templateSnapshotFallback = {
         "score": 10
       },
       "moving_averages": {
-        "ma100": 7313.0806,
-        "ma20": 7581.55,
-        "ma200": 7087.8405,
-        "ma50": 7535.1836,
-        "ma72": 7498.26986
+        "ma100": 7313.1481,
+        "ma20": 7581.8875,
+        "ma200": 7087.87425,
+        "ma50": 7535.3186,
+        "ma72": 7498.36361
       },
       "name": "ES",
       "opening_range_high": null,
@@ -133,17 +127,17 @@ window.templateSnapshotFallback = {
       "overnight_context": {
         "bias": "Pre-open context only",
         "date": "2026-08-11",
-        "europe_direction": "Not enough Europe-session data",
+        "europe_direction": "Buying into NY open",
         "inventory": "Long overnight inventory",
         "open_confirmation": "Waiting for RTH open confirmation",
         "overnight_direction": "Recovered / Bullish",
-        "overnight_high": 7789.5,
-        "overnight_last": 7787.0,
+        "overnight_high": 7796.0,
+        "overnight_last": 7793.75,
         "overnight_low": 7766.5,
         "position": "Inside overnight range",
-        "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
+        "summary": "Recovered / Bullish; Buying into NY open; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
       },
-      "overnight_high": 7789.5,
+      "overnight_high": 7796.0,
       "overnight_low": 7766.5,
       "previous_day_high": 7798.0,
       "previous_day_low": 7763.0,
@@ -156,7 +150,7 @@ window.templateSnapshotFallback = {
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 7623.94489 vs EMA50 7522.52455",
+            "evidence": "EMA20 7624.58775 vs EMA50 7522.78925",
             "pass": true
           },
           "htf_direction": {
@@ -164,15 +158,15 @@ window.templateSnapshotFallback = {
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_high 7789.5; distance 2.5",
+            "evidence": "Nearest: overnight_high 7796.0; distance 2.25",
             "pass": false
           },
           "room_to_target": {
-            "evidence": "Next: overnight_high 7789.5; room 2.5",
-            "pass": true
+            "evidence": "Next: overnight_high 7796.0; room 2.25",
+            "pass": false
           },
           "vwap_alignment": {
-            "evidence": "Price 7787.0 vs VWAP None",
+            "evidence": "Price 7793.75 vs VWAP None",
             "pass": false
           }
         },
@@ -185,9 +179,9 @@ window.templateSnapshotFallback = {
         "pivot": 7779.25,
         "rating": "STALE",
         "ready": false,
-        "score": 3,
-        "target_room": 2.5,
-        "target_room_atr": 0.562,
+        "score": 2,
+        "target_room": 2.25,
+        "target_room_atr": 0.407,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -206,20 +200,21 @@ window.templateSnapshotFallback = {
       }
     },
     "ZB": {
-      "atr_15m": 0.07054,
-      "atr_20m": 0.07054,
-      "atr_daily": 0.93383,
+      "atr_15m": 0.1024,
+      "atr_20m": 0.1024,
+      "atr_daily": 0.94945,
       "automation": {
         "anchored_vwap_2day": null,
         "anchored_vwap_2day_distance": null,
         "anchored_vwap_2day_position": "Mixed",
-        "bb_position": 0.616,
-        "chase_filter": "PASS \u2014 normal band position",
+        "bb_position": 0.893,
+        "chase_filter": "LONG CHASE \u2014 wait for pullback/retest",
         "confirmation_time": null,
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
         "delta_result": "Mixed",
         "direction": "No Trade",
+        "engine_version": "ZB V2",
         "entry": null,
         "entry_type": "Watch Zone \u2192 Trigger \u2192 Actual Entry",
         "exit_plan": "No position. Wait for confirmation.",
@@ -233,14 +228,14 @@ window.templateSnapshotFallback = {
         "setup_confirmed": false,
         "setup_status": "NO TRADE \u2014 LIVE DATA QUALITY GATE FAILED",
         "stop": null,
-        "structure_score": 8,
+        "structure_score": 6,
         "target1": null,
         "target2": null,
         "todays_bias": "Bear",
         "trade_plan_score": 0,
-        "trend_pro_240_bearish_level": 108.59375,
+        "trend_pro_240_bearish_level": 108.375,
         "trend_pro_240_bullish_level": 108.78125,
-        "trend_pro_daily_bearish_level": 108.75,
+        "trend_pro_daily_bearish_level": 108.71875,
         "trend_pro_daily_bullish_level": 109.65625,
         "trend_pro_result": "Bearish",
         "trend_pro_score": 15,
@@ -254,7 +249,7 @@ window.templateSnapshotFallback = {
             "setup": "Overnight Low Breakdown Retest",
             "status": "WAITING FOR CONFIRMATION",
             "trigger": "5m acceptance below, retest, then rejection",
-            "watch_level": 108.59375
+            "watch_level": 108.375
           },
           {
             "rank": 2,
@@ -266,9 +261,9 @@ window.templateSnapshotFallback = {
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 108.61747,
-        "middle": 108.725,
-        "upper": 108.83253
+        "lower": 108.28187,
+        "middle": 108.52656,
+        "upper": 108.77125
       },
       "contract_selection": {
         "mode": "Yahoo continuous fallback",
@@ -277,14 +272,14 @@ window.templateSnapshotFallback = {
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
-        "ema20": 109.9277,
-        "ema50": 111.08199
+        "ema20": 109.92473,
+        "ema50": 111.08076
       },
       "higher_timeframe_trend": "Bearish",
-      "last": 108.75,
+      "last": 108.71875,
       "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 04:54 UTC",
-      "last_time_et": "2026-08-11 12:54 AM ET",
+      "last_time": "2026-08-11 11:16 UTC",
+      "last_time_et": "2026-08-11 7:16 AM ET",
       "monthly_high": 112.90625,
       "monthly_low": 108.25,
       "monthly_trend": {
@@ -292,11 +287,11 @@ window.templateSnapshotFallback = {
         "score": 3
       },
       "moving_averages": {
-        "ma100": 112.32,
-        "ma20": 109.90937,
-        "ma200": 114.37547,
-        "ma50": 111.5625,
-        "ma72": 111.74523
+        "ma100": 112.31969,
+        "ma20": 109.90781,
+        "ma200": 114.37531,
+        "ma50": 111.56188,
+        "ma72": 111.74479
       },
       "name": "ZB",
       "opening_range_high": null,
@@ -304,18 +299,18 @@ window.templateSnapshotFallback = {
       "overnight_context": {
         "bias": "Pre-open context only",
         "date": "2026-08-11",
-        "europe_direction": "Not enough Europe-session data",
+        "europe_direction": "Buying into NY open",
         "inventory": "Short overnight inventory",
         "open_confirmation": "Waiting for RTH open confirmation",
         "overnight_direction": "Recovered / Bullish",
         "overnight_high": 108.8125,
-        "overnight_last": 108.75,
-        "overnight_low": 108.59375,
+        "overnight_last": 108.71875,
+        "overnight_low": 108.375,
         "position": "Inside overnight range",
-        "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
+        "summary": "Recovered / Bullish; Buying into NY open; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
       },
       "overnight_high": 108.8125,
-      "overnight_low": 108.59375,
+      "overnight_low": 108.375,
       "previous_day_high": 109.65625,
       "previous_day_low": 108.75,
       "price_basis": "Latest value in the 5-minute feed bar; the newest bar may still be forming",
@@ -323,11 +318,11 @@ window.templateSnapshotFallback = {
       "selector": {
         "checks": {
           "confirmed_reaction": {
-            "evidence": "2 five-minute close(s) vs 108.75",
+            "evidence": "2 five-minute close(s) vs 108.71875",
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 109.9277 vs EMA50 111.08199",
+            "evidence": "EMA20 109.92473 vs EMA50 111.08076",
             "pass": true
           },
           "htf_direction": {
@@ -335,15 +330,15 @@ window.templateSnapshotFallback = {
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: previous_day_low 108.75; distance 0.0",
+            "evidence": "Nearest: previous_week_low 108.71875; distance 0.0",
             "pass": true
           },
           "room_to_target": {
-            "evidence": "Next: previous_week_low 108.71875; room 0.03125",
-            "pass": false
+            "evidence": "Next: overnight_low 108.375; room 0.34375",
+            "pass": true
           },
           "vwap_alignment": {
-            "evidence": "Price 108.75 vs VWAP None",
+            "evidence": "Price 108.71875 vs VWAP None",
             "pass": false
           }
         },
@@ -356,9 +351,9 @@ window.templateSnapshotFallback = {
         "pivot": 109.10417,
         "rating": "STALE",
         "ready": false,
-        "score": 3,
-        "target_room": 0.03125,
-        "target_room_atr": 0.443,
+        "score": 4,
+        "target_room": 0.34375,
+        "target_room_atr": 3.357,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -394,7 +389,7 @@ window.templateSnapshotFallback = {
   },
   "volatility": {
     "move": null,
-    "vix": 15.46,
+    "vix": 15.45,
     "vix_status": "delayed"
   },
   "yields": {

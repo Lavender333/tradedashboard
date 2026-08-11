@@ -570,6 +570,7 @@ def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: fl
 def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], rows: List[Dict], atr_value, bb_position, generated_at: datetime, data_quality_pass: bool) -> Dict:
     pending = {
         "confirmed": False,
+        "engine_version": "ES V3" if name == "ES" else "ZB V2",
         "direction": "No Trade",
         "status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
         "entry": None,
@@ -599,7 +600,23 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
     confirmation_bar = completed[-1]
     confirmation_index = len(completed) - 1
 
+    if name == "ES":
+        confirmation_et = confirmation_bar["time"].astimezone(ZoneInfo("America/New_York"))
+        confirmation_minutes = confirmation_et.hour * 60 + confirmation_et.minute
+        if confirmation_minutes < 9 * 60 + 30 or confirmation_minutes >= 14 * 60:
+            pending["status"] = "ES V3 SKIP — OUTSIDE 9:30 AM–2:00 PM ET"
+            return pending
+        confirmation_body_atr = abs(confirmation_bar["close"] - confirmation_bar["open"]) / float(atr_value)
+        if confirmation_body_atr > 0.35:
+            pending["status"] = "ES V3 SKIP — CONFIRMATION CANDLE CHASE (>0.35 ATR)"
+            return pending
+        if long_side and (bb_position is None or bb_position < 0.60 or bb_position > 0.75):
+            pending["status"] = "ES V3 SKIP — LONG BB LOCATION MUST BE 0.60–0.75"
+            return pending
+
     for watch in watch_levels:
+        if name == "ES" and not watch["setup"].startswith(("Opening Range", "Overnight")):
+            continue
         level = float(watch["watch_level"])
         if long_side:
             candle_confirmed = confirmation_bar["close"] > level and confirmation_bar["close"] > confirmation_bar["open"]
@@ -639,7 +656,10 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
             risk = entry - stop if long_side else stop - entry
             atr_ratio = risk / float(atr_value)
             chase_failed = (long_side and bb_position is not None and bb_position > 0.85) or (not long_side and bb_position is not None and bb_position < 0.15)
-            if risk <= 0 or atr_ratio < 0.25 or atr_ratio > 1.0 or chase_failed:
+            minimum_atr_risk = 0.45 if name == "ES" else 0.25
+            if risk <= 0 or atr_ratio < minimum_atr_risk or atr_ratio > 1.0 or chase_failed:
+                if name == "ES" and risk > 0 and atr_ratio < minimum_atr_risk:
+                    pending["status"] = "ES V3 SKIP — STRUCTURAL STOP TOO TIGHT (<0.45 ATR)"
                 continue
             target1 = entry + risk if long_side else entry - risk
             target2 = entry + 2 * risk if long_side else entry - 2 * risk
@@ -656,6 +676,7 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
                 "target2": round_price(target2),
                 "risk_points": round_price(risk),
                 "atr_risk_ratio": round(atr_ratio, 3),
+                "engine_version": "ES V3" if name == "ES" else "ZB V2",
                 "rr1": 1.0,
                 "rr2": 2.0,
                 "confirmation_time": confirmation_bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
@@ -1021,6 +1042,11 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     market_hours_pass = now_et.weekday() < 5 and 9 * 60 + 30 <= now_minutes < 16 * 60
     data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready and market_hours_pass
     watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
+    if name == "ES":
+        watch_levels = [
+            watch for watch in watch_levels
+            if watch["setup"].startswith(("Opening Range", "Overnight"))
+        ]
     trade_setup = confirmed_trade_setup(
         name, htf_result, watch_levels, five_minute, intraday_atr, bb_position, generated_at, data_quality_pass
     )
@@ -1045,6 +1071,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         data_quality_pass,
     )
     auto = {
+        "engine_version": trade_setup["engine_version"],
         "direction": decision["direction"],
         "delta_result": "Mixed",
         "entry_type": trade_setup.get("setup") or "Watch Zone → Trigger → Actual Entry",

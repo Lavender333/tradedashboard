@@ -237,6 +237,7 @@ def main():
         "method": {
             "data": "Yahoo Finance continuous futures, five-minute historical bars",
             "window": f"Last {args.sessions} completed RTH sessions available",
+            "engine_policy": "ES V3 locked filters when present in production engine; ZB V2 unchanged",
             "position_management": "50% at 1R, 50% at 2R; original stop retained",
             "intrabar_rule": "Stop first when stop and target occur in the same five-minute bar",
             "costs": "No commission or slippage",

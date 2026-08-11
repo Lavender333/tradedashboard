@@ -1,0 +1,723 @@
+{
+  "generated_at_utc": "2026-08-11T11:22:27.745467+00:00",
+  "method": {
+    "data": "Yahoo Finance continuous futures, five-minute historical bars",
+    "window": "Last 30 completed RTH sessions available",
+    "position_management": "50% at 1R, 50% at 2R; original stop retained",
+    "intrabar_rule": "Stop first when stop and target occur in the same five-minute bar",
+    "costs": "No commission or slippage",
+    "engine_policy": "ES V3 locked filters when present in production engine; ZB V2 unchanged"
+  },
+  "combined": {
+    "trades": 21,
+    "winning_trades": 8,
+    "losing_trades": 10,
+    "flat_trades": 3,
+    "t1_hits": 11,
+    "t2_hits": 8,
+    "net_r": 2.0,
+    "average_r": 0.095,
+    "profit_factor": 1.2
+  },
+  "results": [
+    {
+      "instrument": "ES",
+      "symbol": "ES=F",
+      "sessions": [
+        "2026-06-29",
+        "2026-06-30",
+        "2026-07-01",
+        "2026-07-02",
+        "2026-07-06",
+        "2026-07-07",
+        "2026-07-08",
+        "2026-07-09",
+        "2026-07-10",
+        "2026-07-13",
+        "2026-07-14",
+        "2026-07-15",
+        "2026-07-16",
+        "2026-07-17",
+        "2026-07-20",
+        "2026-07-21",
+        "2026-07-22",
+        "2026-07-23",
+        "2026-07-24",
+        "2026-07-27",
+        "2026-07-28",
+        "2026-07-29",
+        "2026-07-30",
+        "2026-07-31",
+        "2026-08-03",
+        "2026-08-04",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-10"
+      ],
+      "sessions_tested": 30,
+      "trades": 3,
+      "winning_trades": 2,
+      "losing_trades": 1,
+      "flat_trades": 0,
+      "t1_hits": 2,
+      "t2_hits": 2,
+      "net_r": 2.0,
+      "average_r": 0.667,
+      "profit_factor": 3.0,
+      "max_drawdown_r": 1.0,
+      "trade_log": [
+        {
+          "date": "2026-07-06",
+          "time": "2026-07-06 1:45 PM ET",
+          "direction": "Long Only",
+          "setup": "Overnight High Breakout Retest",
+          "entry": 7582.0,
+          "stop": 7575.0,
+          "target1": 7589.0,
+          "target2": 7596.0,
+          "risk_points": 7.0,
+          "risk_atr": 0.779,
+          "volume_ratio": 1.235,
+          "confirmation_body_atr": 0.278,
+          "ema20_50_aligned": true,
+          "bb_position": 0.671,
+          "confirmation_minutes_et": 825,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-07-16",
+          "time": "2026-07-16 11:25 AM ET",
+          "direction": "Long Only",
+          "setup": "Opening Range Breakout Retest",
+          "entry": 7607.25,
+          "stop": 7599.0,
+          "target1": 7615.5,
+          "target2": 7623.75,
+          "risk_points": 8.25,
+          "risk_atr": 0.712,
+          "volume_ratio": 1.16,
+          "confirmation_body_atr": 0.173,
+          "ema20_50_aligned": false,
+          "bb_position": 0.704,
+          "confirmation_minutes_et": 685,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-17",
+          "time": "2026-07-17 11:45 AM ET",
+          "direction": "Long Only",
+          "setup": "Opening Range Breakout Retest",
+          "entry": 7521.25,
+          "stop": 7514.25,
+          "target1": 7528.25,
+          "target2": 7535.25,
+          "risk_points": 7.0,
+          "risk_atr": 0.493,
+          "volume_ratio": 0.685,
+          "confirmation_body_atr": 0.053,
+          "ema20_50_aligned": false,
+          "bb_position": 0.677,
+          "confirmation_minutes_et": 705,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        }
+      ],
+      "no_trade_days": [
+        {
+          "date": "2026-06-29",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-06-30",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-01",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-02",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-07",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-08",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-09",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-10",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-13",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-14",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-15",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-20",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-21",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-22",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-23",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-24",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-27",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-28",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-29",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-30",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-31",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-03",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-04",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-05",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-06",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-07",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-10",
+          "reason": "NO COMPLETE VALID SETUP"
+        }
+      ]
+    },
+    {
+      "instrument": "ZB",
+      "symbol": "ZB=F",
+      "sessions": [
+        "2026-06-29",
+        "2026-06-30",
+        "2026-07-01",
+        "2026-07-02",
+        "2026-07-06",
+        "2026-07-07",
+        "2026-07-08",
+        "2026-07-09",
+        "2026-07-10",
+        "2026-07-13",
+        "2026-07-14",
+        "2026-07-15",
+        "2026-07-16",
+        "2026-07-17",
+        "2026-07-20",
+        "2026-07-21",
+        "2026-07-22",
+        "2026-07-23",
+        "2026-07-24",
+        "2026-07-27",
+        "2026-07-28",
+        "2026-07-29",
+        "2026-07-30",
+        "2026-07-31",
+        "2026-08-03",
+        "2026-08-04",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-10"
+      ],
+      "sessions_tested": 30,
+      "trades": 18,
+      "winning_trades": 6,
+      "losing_trades": 9,
+      "flat_trades": 3,
+      "t1_hits": 9,
+      "t2_hits": 6,
+      "net_r": 0.0,
+      "average_r": 0.0,
+      "profit_factor": 1.0,
+      "max_drawdown_r": 6.0,
+      "trade_log": [
+        {
+          "date": "2026-07-02",
+          "time": "2026-07-02 10:55 AM ET",
+          "direction": "Short Only",
+          "setup": "Previous Day High Rejection",
+          "entry": 112.625,
+          "stop": 112.75,
+          "target1": 112.5,
+          "target2": 112.375,
+          "risk_points": 0.125,
+          "risk_atr": 0.882,
+          "volume_ratio": 0.692,
+          "confirmation_body_atr": 0.22,
+          "ema20_50_aligned": true,
+          "bb_position": 1.114,
+          "confirmation_minutes_et": 655,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-06",
+          "time": "2026-07-06 11:25 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 112.28125,
+          "stop": 112.34375,
+          "target1": 112.21875,
+          "target2": 112.15625,
+          "risk_points": 0.0625,
+          "risk_atr": 0.3,
+          "volume_ratio": 0.42,
+          "confirmation_body_atr": 0.15,
+          "ema20_50_aligned": true,
+          "bb_position": 0.151,
+          "confirmation_minutes_et": 685,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-07",
+          "time": "2026-07-07 1:50 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 111.75,
+          "stop": 111.84375,
+          "target1": 111.65625,
+          "target2": 111.5625,
+          "risk_points": 0.09375,
+          "risk_atr": 0.903,
+          "volume_ratio": 0.637,
+          "confirmation_body_atr": 0.301,
+          "ema20_50_aligned": true,
+          "bb_position": 0.228,
+          "confirmation_minutes_et": 830,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-07-09",
+          "time": "2026-07-09 10:35 AM ET",
+          "direction": "Short Only",
+          "setup": "Previous Day High Rejection",
+          "entry": 111.21875,
+          "stop": 111.28125,
+          "target1": 111.15625,
+          "target2": 111.09375,
+          "risk_points": 0.0625,
+          "risk_atr": 0.577,
+          "volume_ratio": 0.763,
+          "confirmation_body_atr": 0.289,
+          "ema20_50_aligned": true,
+          "bb_position": 0.909,
+          "confirmation_minutes_et": 635,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-10",
+          "time": "2026-07-10 11:55 AM ET",
+          "direction": "Short Only",
+          "setup": "Previous Day High Rejection",
+          "entry": 111.40625,
+          "stop": 111.5,
+          "target1": 111.3125,
+          "target2": 111.21875,
+          "risk_points": 0.09375,
+          "risk_atr": 0.714,
+          "volume_ratio": 0.572,
+          "confirmation_body_atr": 0.476,
+          "ema20_50_aligned": true,
+          "bb_position": 0.549,
+          "confirmation_minutes_et": 715,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-07-13",
+          "time": "2026-07-13 10:35 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 110.875,
+          "stop": 111.0,
+          "target1": 110.75,
+          "target2": 110.625,
+          "risk_points": 0.125,
+          "risk_atr": 0.981,
+          "volume_ratio": 0.799,
+          "confirmation_body_atr": 0.49,
+          "ema20_50_aligned": true,
+          "bb_position": 0.182,
+          "confirmation_minutes_et": 635,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-07-14",
+          "time": "2026-07-14 10:15 AM ET",
+          "direction": "Short Only",
+          "setup": "Previous Day High Rejection",
+          "entry": 110.96875,
+          "stop": 111.125,
+          "target1": 110.8125,
+          "target2": 110.65625,
+          "risk_points": 0.15625,
+          "risk_atr": 0.937,
+          "volume_ratio": 0.942,
+          "confirmation_body_atr": 0.75,
+          "ema20_50_aligned": false,
+          "bb_position": 0.835,
+          "confirmation_minutes_et": 615,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-15",
+          "time": "2026-07-15 11:00 AM ET",
+          "direction": "Short Only",
+          "setup": "Previous Day High Rejection",
+          "entry": 111.1875,
+          "stop": 111.28125,
+          "target1": 111.09375,
+          "target2": 111.0,
+          "risk_points": 0.09375,
+          "risk_atr": 0.765,
+          "volume_ratio": 0.356,
+          "confirmation_body_atr": 0.255,
+          "ema20_50_aligned": false,
+          "bb_position": 0.86,
+          "confirmation_minutes_et": 660,
+          "result": "STOP AFTER T1",
+          "r": 0.0,
+          "t1": true,
+          "t2": false
+        },
+        {
+          "date": "2026-07-17",
+          "time": "2026-07-17 2:25 PM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 111.4375,
+          "stop": 111.5,
+          "target1": 111.375,
+          "target2": 111.3125,
+          "risk_points": 0.0625,
+          "risk_atr": 0.614,
+          "volume_ratio": 0.05,
+          "confirmation_body_atr": 0.307,
+          "ema20_50_aligned": false,
+          "bb_position": 0.351,
+          "confirmation_minutes_et": 865,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-21",
+          "time": "2026-07-21 12:00 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 110.34375,
+          "stop": 110.40625,
+          "target1": 110.28125,
+          "target2": 110.21875,
+          "risk_points": 0.0625,
+          "risk_atr": 0.537,
+          "volume_ratio": 0.649,
+          "confirmation_body_atr": 0.268,
+          "ema20_50_aligned": true,
+          "bb_position": 0.217,
+          "confirmation_minutes_et": 720,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-22",
+          "time": "2026-07-22 11:15 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 110.125,
+          "stop": 110.1875,
+          "target1": 110.0625,
+          "target2": 110.0,
+          "risk_points": 0.0625,
+          "risk_atr": 0.58,
+          "volume_ratio": 0.558,
+          "confirmation_body_atr": 0.29,
+          "ema20_50_aligned": true,
+          "bb_position": 0.161,
+          "confirmation_minutes_et": 675,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-29",
+          "time": "2026-07-29 1:05 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 110.28125,
+          "stop": 110.34375,
+          "target1": 110.21875,
+          "target2": 110.15625,
+          "risk_points": 0.0625,
+          "risk_atr": 0.638,
+          "volume_ratio": 1.199,
+          "confirmation_body_atr": 0.319,
+          "ema20_50_aligned": true,
+          "bb_position": 0.172,
+          "confirmation_minutes_et": 785,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-30",
+          "time": "2026-07-30 11:00 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.25,
+          "stop": 109.375,
+          "target1": 109.125,
+          "target2": 109.0,
+          "risk_points": 0.125,
+          "risk_atr": 0.674,
+          "volume_ratio": 0.698,
+          "confirmation_body_atr": 0.337,
+          "ema20_50_aligned": true,
+          "bb_position": 0.571,
+          "confirmation_minutes_et": 660,
+          "result": "STOP AFTER T1",
+          "r": 0.0,
+          "t1": true,
+          "t2": false
+        },
+        {
+          "date": "2026-07-31",
+          "time": "2026-07-31 1:25 PM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 108.375,
+          "stop": 108.46875,
+          "target1": 108.28125,
+          "target2": 108.1875,
+          "risk_points": 0.09375,
+          "risk_atr": 0.855,
+          "volume_ratio": 0.273,
+          "confirmation_body_atr": 0.285,
+          "ema20_50_aligned": true,
+          "bb_position": 0.231,
+          "confirmation_minutes_et": 805,
+          "result": "STOP AFTER T1",
+          "r": 0.0,
+          "t1": true,
+          "t2": false
+        },
+        {
+          "date": "2026-08-05",
+          "time": "2026-08-05 12:30 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 109.875,
+          "stop": 109.9375,
+          "target1": 109.8125,
+          "target2": 109.75,
+          "risk_points": 0.0625,
+          "risk_atr": 0.442,
+          "volume_ratio": 0.886,
+          "confirmation_body_atr": 0.221,
+          "ema20_50_aligned": true,
+          "bb_position": 0.194,
+          "confirmation_minutes_et": 750,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-08-06",
+          "time": "2026-08-06 10:55 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.6875,
+          "stop": 109.75,
+          "target1": 109.625,
+          "target2": 109.5625,
+          "risk_points": 0.0625,
+          "risk_atr": 0.569,
+          "volume_ratio": 0.471,
+          "confirmation_body_atr": 0.284,
+          "ema20_50_aligned": true,
+          "bb_position": 0.271,
+          "confirmation_minutes_et": 655,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-08-07",
+          "time": "2026-08-07 10:20 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.59375,
+          "stop": 109.6875,
+          "target1": 109.5,
+          "target2": 109.40625,
+          "risk_points": 0.09375,
+          "risk_atr": 0.701,
+          "volume_ratio": 0.626,
+          "confirmation_body_atr": 0.234,
+          "ema20_50_aligned": false,
+          "bb_position": 0.597,
+          "confirmation_minutes_et": 620,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-08-10",
+          "time": "2026-08-10 12:15 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 109.0,
+          "stop": 109.09375,
+          "target1": 108.90625,
+          "target2": 108.8125,
+          "risk_points": 0.09375,
+          "risk_atr": 0.901,
+          "volume_ratio": 0.367,
+          "confirmation_body_atr": 0.3,
+          "ema20_50_aligned": true,
+          "bb_position": 0.216,
+          "confirmation_minutes_et": 735,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        }
+      ],
+      "no_trade_days": [
+        {
+          "date": "2026-06-29",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-06-30",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-01",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-08",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-16",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-20",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-23",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-24",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-27",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-28",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-03",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-04",
+          "reason": "NO COMPLETE VALID SETUP"
+        }
+      ]
+    }
+  ]
+}
