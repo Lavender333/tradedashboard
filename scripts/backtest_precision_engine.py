@@ -4,10 +4,113 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import build_template_snapshot as engine
+
+
+ES_TICK_SIZE = 0.25
+ES_POINT_VALUE = 50.0
+
+
+def load_ninjatrader_bars(path, source_timezone="America/New_York"):
+    """Load NinjaTrader bar exports or conventional timestamp/OHLCV CSV files."""
+    source = Path(path)
+    if not source.exists():
+        raise RuntimeError(f"NinjaTrader export not found: {source}")
+    lines = [line.strip() for line in source.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError(f"NinjaTrader export is empty: {source}")
+
+    local_zone = ZoneInfo(source_timezone)
+    rows = []
+    first = lines[0].lower()
+    has_header = any(label in first for label in ("open", "high", "timestamp", "date"))
+
+    def parse_time(value):
+        text = str(value).strip()
+        formats = (
+            "%Y%m%d %H%M%S", "%Y%m%d %H%M", "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M",
+        )
+        parsed = None
+        for format_ in formats:
+            try:
+                parsed = datetime.strptime(text, format_)
+                break
+            except ValueError:
+                pass
+        if parsed is None:
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise RuntimeError(f"Unsupported NinjaTrader timestamp: {text}") from exc
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=local_zone)
+        return parsed.astimezone(timezone.utc)
+
+    if has_header:
+        delimiter = ";" if lines[0].count(";") > lines[0].count(",") else ","
+        reader = csv.DictReader(lines, delimiter=delimiter)
+        for record in reader:
+            normalized = {str(key).strip().lower().replace(" ", "_"): value for key, value in record.items()}
+            timestamp = normalized.get("timestamp") or normalized.get("datetime") or normalized.get("date_time") or normalized.get("time") or normalized.get("date")
+            try:
+                rows.append({
+                    "time": parse_time(timestamp),
+                    "open": float(normalized["open"]),
+                    "high": float(normalized["high"]),
+                    "low": float(normalized["low"]),
+                    "close": float(normalized["close"]),
+                    "volume": float(normalized.get("volume") or 0),
+                })
+            except (KeyError, TypeError, ValueError):
+                continue
+    else:
+        for line in lines:
+            delimiter = ";" if line.count(";") >= 5 else ","
+            fields = [field.strip() for field in line.split(delimiter)]
+            if len(fields) < 6:
+                continue
+            try:
+                rows.append({
+                    "time": parse_time(fields[0]),
+                    "open": float(fields[1]),
+                    "high": float(fields[2]),
+                    "low": float(fields[3]),
+                    "close": float(fields[4]),
+                    "volume": float(fields[5] or 0),
+                })
+            except ValueError:
+                continue
+
+    rows.sort(key=lambda row: row["time"])
+    unique = {row["time"]: row for row in rows}
+    rows = [unique[key] for key in sorted(unique)]
+    if not rows:
+        raise RuntimeError("No usable OHLCV bars were found in the NinjaTrader export")
+    return rows
+
+
+def daily_from_five_minute(rows):
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(engine.trade_date_for_row(row), []).append(row)
+    daily = []
+    for trade_date, bars in sorted(grouped.items()):
+        daily.append({
+            "time": datetime.combine(trade_date, datetime.min.time(), timezone.utc),
+            "open": bars[0]["open"],
+            "high": max(bar["high"] for bar in bars),
+            "low": min(bar["low"] for bar in bars),
+            "close": bars[-1]["close"],
+            "volume": sum(bar.get("volume") or 0 for bar in bars),
+        })
+    return daily
 
 
 def recent_five_minute_candles(symbol, calendar_days=59):
@@ -95,12 +198,24 @@ def htf_direction(daily, session_date, current):
     return engine.combined_htf_result(daily_result, weekly_result, monthly_result)
 
 
-def outcome(setup, future, session_close):
+def outcome(setup, future, session_close, commission_round_turn=0.0, slippage_ticks=0.0):
     long_side = setup["direction"] == "Long Only"
     entry, stop = setup["entry"], setup["stop"]
     target1, target2 = setup["target1"], setup["target2"]
     risk = setup["risk_points"]
     t1_hit = False
+    transaction_cost_points = (2 * slippage_ticks * ES_TICK_SIZE) + (commission_round_turn / ES_POINT_VALUE)
+    transaction_cost_r = transaction_cost_points / risk
+
+    def net_result(result, gross_r, t1, t2):
+        return {
+            "result": result,
+            "gross_r": round(gross_r, 3),
+            "transaction_cost_r": round(transaction_cost_r, 3),
+            "r": round(gross_r - transaction_cost_r, 3),
+            "t1": t1,
+            "t2": t2,
+        }
 
     for bar in future:
         stop_hit = bar["low"] <= stop if long_side else bar["high"] >= stop
@@ -109,20 +224,20 @@ def outcome(setup, future, session_close):
 
         # A five-minute OHLC bar cannot reveal intrabar ordering. Use stop-first.
         if stop_hit:
-            return {"result": "STOP AFTER T1" if t1_hit else "STOP", "r": 0.0 if t1_hit else -1.0, "t1": t1_hit, "t2": False}
+            return net_result("STOP AFTER T1" if t1_hit else "STOP", 0.0 if t1_hit else -1.0, t1_hit, False)
         if not t1_hit and first_hit:
             t1_hit = True
         if t1_hit and second_hit:
-            return {"result": "TARGET 2", "r": 1.5, "t1": True, "t2": True}
+            return net_result("TARGET 2", 1.5, True, True)
 
     open_r = (session_close - entry) / risk if long_side else (entry - session_close) / risk
     final_r = 0.5 + 0.5 * open_r if t1_hit else open_r
-    return {"result": "SESSION CLOSE", "r": round(max(-1.0, min(1.5, final_r)), 3), "t1": t1_hit, "t2": False}
+    return net_result("SESSION CLOSE", max(-1.0, min(1.5, final_r)), t1_hit, False)
 
 
-def backtest(name, symbol, session_count):
-    five = recent_five_minute_candles(symbol)
-    daily = engine.candles(symbol, "1y", "1d")
+def backtest(name, symbol, session_count, five=None, daily=None, commission_round_turn=0.0, slippage_ticks=0.0):
+    five = five if five is not None else recent_five_minute_candles(symbol)
+    daily = daily if daily is not None else engine.candles(symbol, "1y", "1d")
     dates = completed_rth_dates(five)[-session_count:]
     trades = []
     no_trade_days = []
@@ -176,7 +291,13 @@ def backtest(name, symbol, session_count):
             continue
 
         confirmation_index, setup, features = found
-        result = outcome(setup, session_bars[confirmation_index + 1 :], session_bars[-1]["close"])
+        result = outcome(
+            setup,
+            session_bars[confirmation_index + 1 :],
+            session_bars[-1]["close"],
+            commission_round_turn,
+            slippage_ticks,
+        )
         trades.append({
             "date": session_date.isoformat(),
             "time": setup["confirmation_time"],
@@ -224,23 +345,69 @@ def backtest(name, symbol, session_count):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sessions", type=int, default=10)
+    parser.add_argument("--input", help="NinjaTrader ES five-minute bar export")
+    parser.add_argument("--instrument", choices=("ES", "BOTH"), default="BOTH")
+    parser.add_argument("--source-timezone", default="America/New_York", help="Timezone used by timestamps without an offset")
+    parser.add_argument("--commission-round-turn", type=float, default=5.00, help="ES commission and fees per round turn in dollars")
+    parser.add_argument("--slippage-ticks", type=float, default=1.0, help="Slippage in ES ticks on each side of the trade")
     args = parser.parse_args()
-    if args.sessions < 1 or args.sessions > 40:
-        parser.error("--sessions must be between 1 and 40")
+    maximum_sessions = 250 if args.input else 40
+    if args.sessions < 1 or args.sessions > maximum_sessions:
+        parser.error(f"--sessions must be between 1 and {maximum_sessions}")
+    if args.commission_round_turn < 0 or args.slippage_ticks < 0:
+        parser.error("cost assumptions cannot be negative")
 
-    results = [backtest("ES", "ES=F", args.sessions), backtest("ZB", "ZB=F", args.sessions)]
+    if args.input:
+        five = load_ninjatrader_bars(args.input, args.source_timezone)
+        daily = daily_from_five_minute(five)
+        results = [backtest(
+            "ES",
+            "NinjaTrader ES export",
+            args.sessions,
+            five=five,
+            daily=daily,
+            commission_round_turn=args.commission_round_turn,
+            slippage_ticks=args.slippage_ticks,
+        )]
+        data_description = f"NinjaTrader ES five-minute export: {Path(args.input).name}"
+        cost_description = (
+            f"${args.commission_round_turn:.2f} commission/fees per round turn; "
+            f"{args.slippage_ticks:g} ES tick slippage on entry and exit"
+        )
+    elif args.instrument == "ES":
+        results = [backtest(
+            "ES",
+            "ES=F",
+            args.sessions,
+            commission_round_turn=args.commission_round_turn,
+            slippage_ticks=args.slippage_ticks,
+        )]
+        data_description = "Yahoo Finance ES continuous futures, five-minute historical bars"
+        cost_description = (
+            f"${args.commission_round_turn:.2f} commission/fees per round turn; "
+            f"{args.slippage_ticks:g} ES tick slippage on entry and exit"
+        )
+    else:
+        results = [backtest("ES", "ES=F", args.sessions), backtest("ZB", "ZB=F", args.sessions)]
+        data_description = "Yahoo Finance continuous futures, five-minute historical bars"
+        cost_description = "No commission or slippage"
     combined_trades = [trade for result in results for trade in result["trade_log"]]
     combined_wins = sum(trade["r"] for trade in combined_trades if trade["r"] > 0)
     combined_losses = -sum(trade["r"] for trade in combined_trades if trade["r"] < 0)
     report = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "method": {
-            "data": "Yahoo Finance continuous futures, five-minute historical bars",
+            "data": data_description,
             "window": f"Last {args.sessions} completed RTH sessions available",
             "engine_policy": "ES V3 locked filters when present in production engine; ZB V2 unchanged",
             "position_management": "50% at 1R, 50% at 2R; original stop retained",
             "intrabar_rule": "Stop first when stop and target occur in the same five-minute bar",
-            "costs": "No commission or slippage",
+            "costs": cost_description,
+            "validation_thresholds": {
+                "minimum_profit_factor": 1.5,
+                "positive_expectancy_required": True,
+                "minimum_qualifying_trades": 25,
+            },
         },
         "combined": {
             "trades": len(combined_trades),
@@ -254,6 +421,18 @@ def main():
             "profit_factor": round(combined_wins / combined_losses, 3) if combined_losses else None,
         },
         "results": results,
+    }
+    primary = results[0]
+    report["validation"] = {
+        "profit_factor_pass": primary["profit_factor"] is not None and primary["profit_factor"] >= 1.5,
+        "positive_expectancy_pass": primary["average_r"] > 0,
+        "sample_size_pass": primary["trades"] >= 25,
+        "max_drawdown_r": primary["max_drawdown_r"],
+        "extend_to_250_sessions": bool(args.input and args.sessions == 120 and primary["trades"] < 25),
+        "overall_pass": bool(
+            primary["profit_factor"] is not None and primary["profit_factor"] >= 1.5 and
+            primary["average_r"] > 0 and primary["trades"] >= 25
+        ),
     }
     print(json.dumps(report, indent=2))
 
