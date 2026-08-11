@@ -151,14 +151,31 @@ def backtest(name, symbol, session_count):
             watches = engine.ranked_watch_levels(direction, context, previous["high"], previous["low"])
             setup = engine.confirmed_trade_setup(name, direction, watches, available, atr20, bb_position, generated_at, True)
             if setup["confirmed"]:
-                found = (confirmation_index, setup)
+                previous_volume = [item.get("volume") or 0 for item in available[-21:-1]]
+                average_volume = sum(previous_volume) / len(previous_volume) if previous_volume else 0
+                volume_ratio = (bar.get("volume") or 0) / average_volume if average_volume else None
+                closes20 = [item["close"] for item in twenty]
+                ema20 = engine.ema(closes20, 20)
+                ema50 = engine.ema(closes20, 50)
+                found = (confirmation_index, setup, {
+                    "risk_atr": round(setup["risk_points"] / atr20, 3) if atr20 else None,
+                    "volume_ratio": round(volume_ratio, 3) if volume_ratio is not None else None,
+                    "confirmation_body_atr": round(abs(bar["close"] - bar["open"]) / atr20, 3) if atr20 else None,
+                    "ema20_50_aligned": bool(
+                        ema20 is not None and ema50 is not None and
+                        ((setup["direction"] == "Long Only" and ema20 > ema50) or
+                         (setup["direction"] == "Short Only" and ema20 < ema50))
+                    ),
+                    "bb_position": round(bb_position, 3) if bb_position is not None else None,
+                    "confirmation_minutes_et": local.hour * 60 + local.minute,
+                })
                 break
 
         if found is None:
             no_trade_days.append({"date": session_date.isoformat(), "reason": "NO COMPLETE VALID SETUP"})
             continue
 
-        confirmation_index, setup = found
+        confirmation_index, setup, features = found
         result = outcome(setup, session_bars[confirmation_index + 1 :], session_bars[-1]["close"])
         trades.append({
             "date": session_date.isoformat(),
@@ -170,6 +187,7 @@ def backtest(name, symbol, session_count):
             "target1": setup["target1"],
             "target2": setup["target2"],
             "risk_points": setup["risk_points"],
+            **features,
             **result,
         })
 
