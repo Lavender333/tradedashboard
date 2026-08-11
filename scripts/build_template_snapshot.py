@@ -438,7 +438,8 @@ def bollinger(rows: List[Dict], period: int = 20, deviations: float = 2.0) -> Di
 def round_price(value):
     if value is None:
         return None
-    return round(float(value), 2)
+    # Five decimals preserve Treasury-futures 1/32 ticks while remaining exact for ES quarter points.
+    return round(float(value), 5)
 
 
 def trend_score(close: float, averages: Dict[str, float]) -> Dict:
@@ -595,52 +596,71 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
     acceptance = 2 * tick
     retest_above = 4 * tick
     retest_below = 6 * tick
+    confirmation_bar = completed[-1]
+    confirmation_index = len(completed) - 1
 
     for watch in watch_levels:
         level = float(watch["watch_level"])
-        for break_index in range(len(completed) - 1):
+        if long_side:
+            candle_confirmed = confirmation_bar["close"] > level and confirmation_bar["close"] > confirmation_bar["open"]
+        else:
+            candle_confirmed = confirmation_bar["close"] < level and confirmation_bar["close"] < confirmation_bar["open"]
+        if not candle_confirmed:
+            continue
+
+        # The confirmation must be the newest completed five-minute candle.
+        # Search backward for the most recent accepted break, then prove a later retest occurred.
+        for break_index in range(confirmation_index - 1, -1, -1):
             breakout_bar = completed[break_index]
             broke = breakout_bar["close"] >= level + acceptance if long_side else breakout_bar["close"] <= level - acceptance
             if not broke:
                 continue
-            for confirm_index in range(break_index + 1, len(completed)):
-                bar = completed[confirm_index]
-                if long_side:
-                    retested = level - retest_below <= bar["low"] <= level + retest_above
-                    confirmed = retested and bar["close"] > level and bar["close"] > bar["open"]
-                else:
-                    retested = level - retest_above <= bar["high"] <= level + retest_below
-                    confirmed = retested and bar["close"] < level and bar["close"] < bar["open"]
-                if not confirmed:
-                    continue
-                entry = float(bar["close"])
-                structure_rows = completed[max(break_index, confirm_index - 2):confirm_index + 1]
-                stop = min(item["low"] for item in structure_rows) - tick if long_side else max(item["high"] for item in structure_rows) + tick
-                risk = entry - stop if long_side else stop - entry
-                atr_ratio = risk / float(atr_value)
-                chase_failed = (long_side and bb_position is not None and bb_position > 0.85) or (not long_side and bb_position is not None and bb_position < 0.15)
-                if risk <= 0 or atr_ratio < 0.25 or atr_ratio > 1.0 or chase_failed:
-                    continue
-                target1 = entry + risk if long_side else entry - risk
-                target2 = entry + 2 * risk if long_side else entry - 2 * risk
-                direction = "Long Only" if long_side else "Short Only"
-                return {
-                    "confirmed": True,
-                    "direction": direction,
-                    "status": f"CONFIRMED {direction.upper()} — {watch['setup']}",
-                    "setup": watch["setup"],
-                    "watch_level": round_price(level),
-                    "entry": round_price(entry),
-                    "stop": round_price(stop),
-                    "target1": round_price(target1),
-                    "target2": round_price(target2),
-                    "risk_points": round_price(risk),
-                    "atr_risk_ratio": round(atr_ratio, 3),
-                    "rr1": 1.0,
-                    "rr2": 2.0,
-                    "confirmation_time": bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
-                    "exit_plan": f"Exit if stop {round_price(stop)} trades. Scale at {round_price(target1)} (1R); exit remainder at {round_price(target2)} (2R) or move stop per plan.",
-                }
+
+            sequence = completed[break_index + 1 : confirmation_index + 1]
+            if long_side:
+                failed = any(item["low"] < level - retest_below for item in sequence)
+                retest_indices = [
+                    break_index + 1 + index for index, item in enumerate(sequence)
+                    if level - retest_below <= item["low"] <= level + retest_above
+                ]
+            else:
+                failed = any(item["high"] > level + retest_below for item in sequence)
+                retest_indices = [
+                    break_index + 1 + index for index, item in enumerate(sequence)
+                    if level - retest_above <= item["high"] <= level + retest_below
+                ]
+            if failed or not retest_indices:
+                continue
+
+            retest_index = retest_indices[-1]
+            entry = float(confirmation_bar["close"])
+            structure_rows = completed[max(retest_index - 1, break_index):confirmation_index + 1]
+            stop = min(item["low"] for item in structure_rows) - tick if long_side else max(item["high"] for item in structure_rows) + tick
+            risk = entry - stop if long_side else stop - entry
+            atr_ratio = risk / float(atr_value)
+            chase_failed = (long_side and bb_position is not None and bb_position > 0.85) or (not long_side and bb_position is not None and bb_position < 0.15)
+            if risk <= 0 or atr_ratio < 0.25 or atr_ratio > 1.0 or chase_failed:
+                continue
+            target1 = entry + risk if long_side else entry - risk
+            target2 = entry + 2 * risk if long_side else entry - 2 * risk
+            direction = "Long Only" if long_side else "Short Only"
+            return {
+                "confirmed": True,
+                "direction": direction,
+                "status": f"CONFIRMED {direction.upper()} — {watch['setup']}",
+                "setup": watch["setup"],
+                "watch_level": round_price(level),
+                "entry": round_price(entry),
+                "stop": round_price(stop),
+                "target1": round_price(target1),
+                "target2": round_price(target2),
+                "risk_points": round_price(risk),
+                "atr_risk_ratio": round(atr_ratio, 3),
+                "rr1": 1.0,
+                "rr2": 2.0,
+                "confirmation_time": confirmation_bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
+                "exit_plan": f"Exit if stop {round_price(stop)} trades. Scale at {round_price(target1)} (1R); exit remainder at {round_price(target2)} (2R) or move stop per plan.",
+            }
     return pending
 
 

@@ -32,18 +32,18 @@
     "summary": "ES/ZB: Yahoo Finance delayed backup; all futures technicals calculated locally from that feed. VIX and Treasury yields are delayed context. Macro events are tagged to official sources."
   },
   "economic_calendar": [],
-  "generated_at": "2026-08-11 04:36 UTC",
+  "generated_at": "2026-08-11 05:04 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 4.54,
-      "atr_20m": 4.54,
-      "atr_daily": 88.06,
+      "atr_15m": 4.45124,
+      "atr_20m": 4.45124,
+      "atr_daily": 88.07707,
       "automation": {
-        "anchored_vwap_2day": 7779.36,
-        "anchored_vwap_2day_distance": 7.64,
+        "anchored_vwap_2day": 7779.37782,
+        "anchored_vwap_2day_distance": 7.62218,
         "anchored_vwap_2day_position": "Above",
-        "bb_position": 0.865,
-        "chase_filter": "LONG CHASE \u2014 wait for pullback/retest",
+        "bb_position": 0.82,
+        "chase_filter": "PASS \u2014 normal band position",
         "confirmation_time": null,
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
@@ -68,7 +68,7 @@
         "todays_bias": "Bull",
         "trade_plan_score": 0,
         "trend_pro_240_bearish_level": 7766.5,
-        "trend_pro_240_bullish_level": 7788.25,
+        "trend_pro_240_bullish_level": 7789.5,
         "trend_pro_daily_bearish_level": 7763.0,
         "trend_pro_daily_bullish_level": 7798.0,
         "trend_pro_result": "Bullish",
@@ -83,7 +83,7 @@
             "setup": "Overnight High Breakout Retest",
             "status": "WAITING FOR CONFIRMATION",
             "trigger": "5m acceptance above, retest, then reclaim",
-            "watch_level": 7788.25
+            "watch_level": 7789.5
           },
           {
             "rank": 2,
@@ -95,9 +95,9 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 7767.13,
-        "middle": 7778.61,
-        "upper": 7790.09
+        "lower": 7767.432,
+        "middle": 7779.3625,
+        "upper": 7791.293
       },
       "contract_selection": {
         "mode": "Yahoo continuous fallback",
@@ -106,14 +106,14 @@
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
-        "ema20": 7623.94,
-        "ema50": 7522.52
+        "ema20": 7623.94489,
+        "ema50": 7522.52455
       },
       "higher_timeframe_trend": "Bullish",
       "last": 7787.0,
-      "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 04:26 UTC",
-      "last_time_et": "2026-08-11 12:26 AM ET",
+      "last_candle_age_minutes": 9,
+      "last_time": "2026-08-11 04:54 UTC",
+      "last_time_et": "2026-08-11 12:54 AM ET",
       "monthly_high": 7632.0,
       "monthly_low": 7324.0,
       "monthly_trend": {
@@ -121,11 +121,11 @@
         "score": 10
       },
       "moving_averages": {
-        "ma100": 7313.08,
+        "ma100": 7313.0806,
         "ma20": 7581.55,
-        "ma200": 7087.84,
-        "ma50": 7535.18,
-        "ma72": 7498.27
+        "ma200": 7087.8405,
+        "ma50": 7535.1836,
+        "ma72": 7498.26986
       },
       "name": "ES",
       "opening_range_high": null,
@@ -137,13 +137,13 @@
         "inventory": "Long overnight inventory",
         "open_confirmation": "Waiting for RTH open confirmation",
         "overnight_direction": "Recovered / Bullish",
-        "overnight_high": 7788.25,
+        "overnight_high": 7789.5,
         "overnight_last": 7787.0,
         "overnight_low": 7766.5,
         "position": "Inside overnight range",
         "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
       },
-      "overnight_high": 7788.25,
+      "overnight_high": 7789.5,
       "overnight_low": 7766.5,
       "previous_day_high": 7798.0,
       "previous_day_low": 7763.0,
@@ -156,7 +156,7 @@
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 7623.94 vs EMA50 7522.52",
+            "evidence": "EMA20 7623.94489 vs EMA50 7522.52455",
             "pass": true
           },
           "htf_direction": {
@@ -164,12 +164,12 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_high 7788.25; distance 1.25",
+            "evidence": "Nearest: overnight_high 7789.5; distance 2.5",
             "pass": false
           },
           "room_to_target": {
-            "evidence": "Next: overnight_high 7788.25; room 1.25",
-            "pass": false
+            "evidence": "Next: overnight_high 7789.5; room 2.5",
+            "pass": true
           },
           "vwap_alignment": {
             "evidence": "Price 7787.0 vs VWAP None",
@@ -185,9 +185,9 @@
         "pivot": 7779.25,
         "rating": "STALE",
         "ready": false,
-        "score": 2,
-        "target_room": 1.25,
-        "target_room_atr": 0.276,
+        "score": 3,
+        "target_room": 2.5,
+        "target_room_atr": 0.562,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -206,14 +206,14 @@
       }
     },
     "ZB": {
-      "atr_15m": 0.06,
-      "atr_20m": 0.06,
-      "atr_daily": 0.93,
+      "atr_15m": 0.07054,
+      "atr_20m": 0.07054,
+      "atr_daily": 0.93383,
       "automation": {
         "anchored_vwap_2day": null,
         "anchored_vwap_2day_distance": null,
         "anchored_vwap_2day_position": "Mixed",
-        "bb_position": 0.216,
+        "bb_position": 0.616,
         "chase_filter": "PASS \u2014 normal band position",
         "confirmation_time": null,
         "data_quality_pass": false,
@@ -233,15 +233,15 @@
         "setup_confirmed": false,
         "setup_status": "NO TRADE \u2014 LIVE DATA QUALITY GATE FAILED",
         "stop": null,
-        "structure_score": 6,
+        "structure_score": 8,
         "target1": null,
         "target2": null,
         "todays_bias": "Bear",
         "trade_plan_score": 0,
-        "trend_pro_240_bearish_level": 108.59,
-        "trend_pro_240_bullish_level": 108.81,
-        "trend_pro_daily_bearish_level": 108.66,
-        "trend_pro_daily_bullish_level": 109.66,
+        "trend_pro_240_bearish_level": 108.59375,
+        "trend_pro_240_bullish_level": 108.78125,
+        "trend_pro_daily_bearish_level": 108.75,
+        "trend_pro_daily_bullish_level": 109.65625,
         "trend_pro_result": "Bearish",
         "trend_pro_score": 15,
         "volatility_score": 3,
@@ -254,21 +254,21 @@
             "setup": "Overnight Low Breakdown Retest",
             "status": "WAITING FOR CONFIRMATION",
             "trigger": "5m acceptance below, retest, then rejection",
-            "watch_level": 108.59
+            "watch_level": 108.59375
           },
           {
             "rank": 2,
             "setup": "Previous Day High Rejection",
             "status": "WAITING FOR CONFIRMATION",
             "trigger": "sweep and completed 5m rejection",
-            "watch_level": 109.66
+            "watch_level": 109.65625
           }
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 108.6,
-        "middle": 108.73,
-        "upper": 108.86
+        "lower": 108.61747,
+        "middle": 108.725,
+        "upper": 108.83253
       },
       "contract_selection": {
         "mode": "Yahoo continuous fallback",
@@ -277,15 +277,15 @@
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
-        "ema20": 109.92,
-        "ema50": 111.08
+        "ema20": 109.9277,
+        "ema50": 111.08199
       },
       "higher_timeframe_trend": "Bearish",
-      "last": 108.66,
-      "last_candle_age_minutes": 11,
-      "last_time": "2026-08-11 04:25 UTC",
-      "last_time_et": "2026-08-11 12:25 AM ET",
-      "monthly_high": 112.91,
+      "last": 108.75,
+      "last_candle_age_minutes": 10,
+      "last_time": "2026-08-11 04:54 UTC",
+      "last_time_et": "2026-08-11 12:54 AM ET",
+      "monthly_high": 112.90625,
       "monthly_low": 108.25,
       "monthly_trend": {
         "result": "Bearish",
@@ -293,10 +293,10 @@
       },
       "moving_averages": {
         "ma100": 112.32,
-        "ma20": 109.9,
-        "ma200": 114.38,
-        "ma50": 111.56,
-        "ma72": 111.74
+        "ma20": 109.90937,
+        "ma200": 114.37547,
+        "ma50": 111.5625,
+        "ma72": 111.74523
       },
       "name": "ZB",
       "opening_range_high": null,
@@ -307,27 +307,27 @@
         "europe_direction": "Not enough Europe-session data",
         "inventory": "Short overnight inventory",
         "open_confirmation": "Waiting for RTH open confirmation",
-        "overnight_direction": "Weak / Bearish",
-        "overnight_high": 108.81,
-        "overnight_last": 108.66,
-        "overnight_low": 108.59,
+        "overnight_direction": "Recovered / Bullish",
+        "overnight_high": 108.8125,
+        "overnight_last": 108.75,
+        "overnight_low": 108.59375,
         "position": "Inside overnight range",
-        "summary": "Weak / Bearish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
+        "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
       },
-      "overnight_high": 108.81,
-      "overnight_low": 108.59,
-      "previous_day_high": 109.66,
+      "overnight_high": 108.8125,
+      "overnight_low": 108.59375,
+      "previous_day_high": 109.65625,
       "previous_day_low": 108.75,
       "price_basis": "Latest value in the 5-minute feed bar; the newest bar may still be forming",
       "price_source": "Yahoo Finance delayed backup",
       "selector": {
         "checks": {
           "confirmed_reaction": {
-            "evidence": "2 five-minute close(s) vs None",
+            "evidence": "2 five-minute close(s) vs 108.75",
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 109.92 vs EMA50 111.08",
+            "evidence": "EMA20 109.9277 vs EMA50 111.08199",
             "pass": true
           },
           "htf_direction": {
@@ -335,15 +335,15 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_low 108.59; distance 0.06",
-            "pass": false
-          },
-          "room_to_target": {
-            "evidence": "Next: overnight_low 108.59; room 0.06",
+            "evidence": "Nearest: previous_day_low 108.75; distance 0.0",
             "pass": true
           },
+          "room_to_target": {
+            "evidence": "Next: previous_week_low 108.71875; room 0.03125",
+            "pass": false
+          },
           "vwap_alignment": {
-            "evidence": "Price 108.66 vs VWAP None",
+            "evidence": "Price 108.75 vs VWAP None",
             "pass": false
           }
         },
@@ -351,14 +351,14 @@
         "data_fresh": false,
         "decision_time": "08:30 ET",
         "direction": "SHORT",
-        "fib_50": 109.2,
+        "fib_50": 109.20312,
         "name": "ZB",
-        "pivot": 109.1,
+        "pivot": 109.10417,
         "rating": "STALE",
         "ready": false,
         "score": 3,
-        "target_room": 0.06,
-        "target_room_atr": 0.972,
+        "target_room": 0.03125,
+        "target_room_atr": 0.443,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -369,11 +369,11 @@
         "result": "Bearish",
         "score": 0
       },
-      "weekly_high": 110.41,
-      "weekly_low": 108.72,
+      "weekly_high": 110.40625,
+      "weekly_low": 108.71875,
       "weekly_trend": {
         "result": "Bearish",
-        "score": 0
+        "score": 3
       }
     }
   },
@@ -400,20 +400,20 @@
   "yields": {
     "10y": {
       "direction": "Up",
-      "latest": 4.7,
+      "latest": 4.699,
       "previous": 4.66,
       "symbol": "^TNX"
     },
     "2y": {
       "direction": "Up",
-      "latest": 3.72,
+      "latest": 3.718,
       "previous": 3.71,
       "symbol": "^IRX"
     },
     "30y": {
       "direction": "Up",
-      "latest": 5.24,
-      "previous": 5.21,
+      "latest": 5.243,
+      "previous": 5.211,
       "symbol": "^TYX"
     }
   }

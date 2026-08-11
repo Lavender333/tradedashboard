@@ -1,0 +1,286 @@
+{
+  "generated_at_utc": "2026-08-11T05:04:29.112999+00:00",
+  "method": {
+    "data": "Yahoo Finance continuous futures, five-minute historical bars",
+    "window": "Last 10 completed RTH sessions available",
+    "position_management": "50% at 1R, 50% at 2R; original stop retained",
+    "intrabar_rule": "Stop first when stop and target occur in the same five-minute bar",
+    "costs": "No commission or slippage"
+  },
+  "combined": {
+    "trades": 11,
+    "winning_trades": 3,
+    "losing_trades": 6,
+    "flat_trades": 2,
+    "t1_hits": 5,
+    "t2_hits": 3,
+    "net_r": -1.5,
+    "average_r": -0.136,
+    "profit_factor": 0.75
+  },
+  "results": [
+    {
+      "instrument": "ES",
+      "symbol": "ES=F",
+      "sessions": [
+        "2026-07-28",
+        "2026-07-29",
+        "2026-07-30",
+        "2026-07-31",
+        "2026-08-03",
+        "2026-08-04",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-10"
+      ],
+      "sessions_tested": 10,
+      "trades": 4,
+      "winning_trades": 0,
+      "losing_trades": 4,
+      "flat_trades": 0,
+      "t1_hits": 0,
+      "t2_hits": 0,
+      "net_r": -4.0,
+      "average_r": -1.0,
+      "profit_factor": 0.0,
+      "max_drawdown_r": 4.0,
+      "trade_log": [
+        {
+          "date": "2026-07-29",
+          "time": "2026-07-29 2:10 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 7429.5,
+          "stop": 7446.75,
+          "target1": 7412.25,
+          "target2": 7395.0,
+          "risk_points": 17.25,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-08-06",
+          "time": "2026-08-06 10:40 AM ET",
+          "direction": "Long Only",
+          "setup": "Previous Day Low Rejection",
+          "entry": 7751.5,
+          "stop": 7746.0,
+          "target1": 7757.0,
+          "target2": 7762.5,
+          "risk_points": 5.5,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-08-07",
+          "time": "2026-08-07 12:45 PM ET",
+          "direction": "Long Only",
+          "setup": "Opening Range Breakout Retest",
+          "entry": 7774.0,
+          "stop": 7769.5,
+          "target1": 7778.5,
+          "target2": 7783.0,
+          "risk_points": 4.5,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-08-10",
+          "time": "2026-08-10 11:15 AM ET",
+          "direction": "Long Only",
+          "setup": "Opening Range Breakout Retest",
+          "entry": 7785.75,
+          "stop": 7780.5,
+          "target1": 7791.0,
+          "target2": 7796.25,
+          "risk_points": 5.25,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        }
+      ],
+      "no_trade_days": [
+        {
+          "date": "2026-07-28",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-30",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-07-31",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-03",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-04",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-05",
+          "reason": "NO COMPLETE VALID SETUP"
+        }
+      ]
+    },
+    {
+      "instrument": "ZB",
+      "symbol": "ZB=F",
+      "sessions": [
+        "2026-07-28",
+        "2026-07-29",
+        "2026-07-30",
+        "2026-07-31",
+        "2026-08-03",
+        "2026-08-04",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-10"
+      ],
+      "sessions_tested": 10,
+      "trades": 7,
+      "winning_trades": 3,
+      "losing_trades": 2,
+      "flat_trades": 2,
+      "t1_hits": 5,
+      "t2_hits": 3,
+      "net_r": 2.5,
+      "average_r": 0.357,
+      "profit_factor": 2.25,
+      "max_drawdown_r": 2.0,
+      "trade_log": [
+        {
+          "date": "2026-07-29",
+          "time": "2026-07-29 1:05 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 110.28125,
+          "stop": 110.34375,
+          "target1": 110.21875,
+          "target2": 110.15625,
+          "risk_points": 0.0625,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-07-30",
+          "time": "2026-07-30 11:00 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.25,
+          "stop": 109.375,
+          "target1": 109.125,
+          "target2": 109.0,
+          "risk_points": 0.125,
+          "result": "STOP AFTER T1",
+          "r": 0.0,
+          "t1": true,
+          "t2": false
+        },
+        {
+          "date": "2026-07-31",
+          "time": "2026-07-31 1:25 PM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 108.375,
+          "stop": 108.46875,
+          "target1": 108.28125,
+          "target2": 108.1875,
+          "risk_points": 0.09375,
+          "result": "STOP AFTER T1",
+          "r": 0.0,
+          "t1": true,
+          "t2": false
+        },
+        {
+          "date": "2026-08-05",
+          "time": "2026-08-05 12:30 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 109.875,
+          "stop": 109.9375,
+          "target1": 109.8125,
+          "target2": 109.75,
+          "risk_points": 0.0625,
+          "result": "STOP",
+          "r": -1.0,
+          "t1": false,
+          "t2": false
+        },
+        {
+          "date": "2026-08-06",
+          "time": "2026-08-06 10:55 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.6875,
+          "stop": 109.75,
+          "target1": 109.625,
+          "target2": 109.5625,
+          "risk_points": 0.0625,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-08-07",
+          "time": "2026-08-07 10:20 AM ET",
+          "direction": "Short Only",
+          "setup": "Opening Range Breakdown Retest",
+          "entry": 109.59375,
+          "stop": 109.6875,
+          "target1": 109.5,
+          "target2": 109.40625,
+          "risk_points": 0.09375,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        },
+        {
+          "date": "2026-08-10",
+          "time": "2026-08-10 12:15 PM ET",
+          "direction": "Short Only",
+          "setup": "Overnight Low Breakdown Retest",
+          "entry": 109.0,
+          "stop": 109.09375,
+          "target1": 108.90625,
+          "target2": 108.8125,
+          "risk_points": 0.09375,
+          "result": "TARGET 2",
+          "r": 1.5,
+          "t1": true,
+          "t2": true
+        }
+      ],
+      "no_trade_days": [
+        {
+          "date": "2026-07-28",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-03",
+          "reason": "NO COMPLETE VALID SETUP"
+        },
+        {
+          "date": "2026-08-04",
+          "reason": "NO COMPLETE VALID SETUP"
+        }
+      ]
+    }
+  ]
+}
