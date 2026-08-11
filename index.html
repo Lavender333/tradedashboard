@@ -1,106 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ES / ZB Clean Trade Board</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d1424">
+  <title>Market Conditions Calendar</title>
   <style>
-    :root { color-scheme: dark; --bg:#090b12; --panel:#121522; --line:#292e40; --text:#f5f7ff; --muted:#9ca3b8; --lav:#b9a5ff; --green:#55dfa7; --red:#ff7887; --amber:#ffd166; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:radial-gradient(circle at 15% 0%,#242040 0,transparent 32rem),var(--bg); color:var(--text); font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif; }
-    main { width:min(1180px,calc(100% - 28px)); margin:0 auto; padding:28px 0 48px; }
-    header { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:20px; }
-    h1 { margin:0; font-size:clamp(25px,4vw,40px); letter-spacing:-.04em; }
-    .subtitle,.muted { color:var(--muted); }
-    .subtitle { margin-top:4px; }
-    .links { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    a,button { color:var(--text); background:#1a1e2d; border:1px solid var(--line); border-radius:10px; padding:9px 12px; text-decoration:none; cursor:pointer; }
-    button:hover,a:hover { border-color:var(--lav); }
-    .sourcebar { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:13px 16px; background:#10131d; border:1px solid var(--line); border-radius:14px; margin-bottom:18px; }
-    .dot { width:9px; height:9px; border-radius:50%; display:inline-block; background:var(--amber); margin-right:7px; }
-    .board { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
-    .card { background:linear-gradient(160deg,rgba(24,28,44,.98),rgba(15,18,29,.98)); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.22); }
-    .card.live { border-color:rgba(85,223,167,.55); }
-    .cardhead { padding:20px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
-    .instrument { font-size:28px; font-weight:800; letter-spacing:-.03em; }
-    .contract { color:var(--muted); font-size:12px; }
-    .price { text-align:right; font-size:27px; font-weight:750; }
-    .price time { display:block; font-size:11px; font-weight:500; color:var(--muted); }
-    .decision { padding:18px 20px; }
-    .label { color:var(--muted); text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:700; }
-    .status { margin:5px 0 4px; font-size:22px; font-weight:800; }
-    .status.good { color:var(--green); } .status.bad { color:var(--red); } .status.wait { color:var(--amber); }
-    .setup { color:#d8dced; min-height:22px; }
-    .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0; }
-    .step { padding:10px; border:1px solid var(--line); border-radius:11px; text-align:center; color:var(--muted); font-size:12px; }
-    .step strong { display:block; color:var(--text); font-size:14px; margin-top:2px; }
-    .levels { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
-    .level { padding:12px 10px; min-width:0; }
-    .level + .level { border-left:1px solid var(--line); }
-    .level b { display:block; font-size:18px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .watch { margin-top:16px; padding:13px; background:#0d101a; border-radius:12px; }
-    .watchrow { display:flex; justify-content:space-between; gap:14px; padding:7px 0; border-bottom:1px solid rgba(41,46,64,.65); }
-    .watchrow:last-child { border-bottom:0; }
-    .checks { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px; }
-    .check { background:#0d101a; border-radius:10px; padding:9px 11px; }
-    .check span { display:block; color:var(--muted); font-size:11px; }
-    .footnote { margin:18px 2px 0; color:var(--muted); font-size:12px; }
-    .error { padding:30px; background:#2b1520; border:1px solid var(--red); border-radius:15px; }
-    @media(max-width:820px){ header{align-items:flex-start;flex-direction:column}.links{justify-content:flex-start}.board{grid-template-columns:1fr}.levels{grid-template-columns:repeat(2,1fr)}.level:nth-child(3){border-left:0;border-top:1px solid var(--line)}.level:nth-child(4){border-top:1px solid var(--line)} }
+    html,body,#root{margin:0;min-height:100%;background:#0d1424}
+    *{box-sizing:border-box}
+    button,a{-webkit-tap-highlight-color:transparent}
   </style>
 </head>
 <body>
-<main>
-  <header>
-    <div><h1>Clean Trade Board</h1><div class="subtitle">One decision. Confirmed prices only.</div></div>
-    <nav class="links"><button id="refresh">Refresh now</button><a href="trading-template-es.html">Full ES worksheet</a><a href="trading-template-zb.html">Full ZB worksheet</a></nav>
-  </header>
-  <div class="sourcebar" id="sourcebar"><span><i class="dot"></i>Loading market snapshot…</span></div>
-  <section class="board" id="board"></section>
-  <p class="footnote">Direct entries are shown only after live-data, trading-hours, breakout, retest, completed 5-minute confirmation, structural-stop, ATR-risk, and chase filters all pass. This board does not place orders.</p>
-</main>
-<script>
-  const $ = (selector) => document.querySelector(selector);
-  const val = (value, fallback='—') => value === null || value === undefined || value === '' ? fallback : value;
-  const fmt = (value) => value === null || value === undefined ? '—' : Number(value).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
-  const esc = (value) => String(val(value)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  function card(name, item) {
-    const auto = item.automation || {};
-    const confirmed = Boolean(auto.setup_confirmed);
-    const quality = Boolean(auto.data_quality_pass);
-    const statusClass = confirmed ? 'good' : quality ? 'wait' : 'bad';
-    const status = confirmed ? `${auto.direction || 'TRADE'} CONFIRMED` : quality ? auto.setup_status : 'NO TRADE';
-    const contract = item.contract_selection?.symbol || item.symbol || name;
-    const watches = (auto.watch_levels || []).slice(0,3).map(w => `<div class="watchrow"><span>#${esc(w.rank)} ${esc(w.setup)}</span><strong>${fmt(w.watch_level)}</strong></div>`).join('') || '<div class="muted">No watch levels available.</div>';
-    return `<article class="card ${quality ? 'live' : ''}">
-      <div class="cardhead"><div><div class="instrument">${esc(name)}</div><div class="contract">Contract ${esc(contract)} · ${esc(item.price_source)}</div></div><div class="price">${fmt(item.last)}<time>Price time ${esc(item.last_time_et)}</time></div></div>
-      <div class="decision">
-        <div class="label">Final decision</div><div class="status ${statusClass}">${esc(status)}</div><div class="setup">${esc(auto.setup || auto.data_quality_reason || 'Waiting for current information')}</div>
-        <div class="steps"><div class="step">Breakout<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">Retest<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">5m close<strong>${confirmed ? '✓' : 'WAIT'}</strong></div></div>
-        <div class="levels"><div class="level"><span class="label">Entry</span><b>${fmt(auto.entry)}</b></div><div class="level"><span class="label">Stop</span><b>${fmt(auto.stop)}</b></div><div class="level"><span class="label">Target 1</span><b>${fmt(auto.target1)}</b></div><div class="level"><span class="label">Target 2</span><b>${fmt(auto.target2)}</b></div></div>
-        <div class="watch"><div class="label">Ranked watch levels — not entries</div>${watches}</div>
-        <div class="checks"><div class="check"><span>Bias</span>${esc(auto.todays_bias || item.higher_timeframe_trend)}</div><div class="check"><span>20m ATR(14)</span>${fmt(item.atr_20m)}</div><div class="check"><span>VWAP</span>${auto.vwap == null ? esc(auto.vwap_position || 'Not ready') : `${fmt(auto.vwap)} · ${esc(auto.vwap_position)}`}</div><div class="check"><span>Chase filter</span>${esc(auto.chase_filter)}</div><div class="check"><span>Data gate</span>${quality ? 'PASS' : esc(auto.data_quality_reason)}</div><div class="check"><span>Data age</span>${esc(item.last_candle_age_minutes)} min</div></div>
-      </div>
-    </article>`;
-  }
-
-  async function load() {
-    try {
-      const response = await fetch(`data/template-snapshot.json?t=${Date.now()}`, {cache:'no-store'});
-      if (!response.ok) throw new Error(`Snapshot unavailable (${response.status})`);
-      const data = await response.json();
-      const instruments = data.instruments || {};
-      $('#board').innerHTML = ['ES','ZB'].map(name => card(name, instruments[name] || {})).join('');
-      const live = ['ES','ZB'].some(name => instruments[name]?.automation?.data_quality_pass);
-      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:${live ? 'var(--green)' : 'var(--amber)'}"></i>${live ? 'Live confirmation available' : 'Planning only / no live confirmation'}</span><span>Provider: <strong>${esc(data.provider)}</strong></span><span>Snapshot: <strong>${esc(data.generated_at)}</strong></span><span>Board checks for updates every minute</span>`;
-    } catch (error) {
-      $('#board').innerHTML = `<div class="error">Could not load the decision board: ${esc(error.message)}</div>`;
-    }
-  }
-  $('#refresh').addEventListener('click', load);
-  load();
-  setInterval(load, 60000);
-</script>
+  <div id="root"></div>
+  <script type="module" src="assets/seasonality-app.js"></script>
 </body>
 </html>

@@ -49,6 +49,8 @@ python lavender_dashboard.py
 The page auto-refreshes every 60 seconds and shows the same breakout/breakdown lines, dip and supply zones, ATR, bias text, provider/symbol, data freshness, ETH session window, overnight high/low, and prior RTH high/low. The JSON powering the page is available at `/api/snapshot`.
 
 ### GitHub Pages
+
+The homepage is the interactive Market Conditions Calendar supplied in React/TSX and bundled as a static asset for GitHub Pages. The live ES/ZB execution view remains available at `trade-board.html`, with the full worksheets at `trading-template-es.html` and `trading-template-zb.html`.
 The public static dashboard is available at:
 
 ```text
@@ -93,7 +95,7 @@ Executable signals are limited to Monday–Friday, 9:30 a.m.–4:00 p.m. ET. Git
 
 Manual confirmation is still required for custom Trend Pro levels, Bookmap/order-flow reads, trade entries, stops, targets, and the order-flow portion of the Institutional Alignment Gate.
 
-GitHub Pages cannot run Flask, so the Pages version reads generated snapshots. The included workflow refreshes them every 15 minutes using the free delayed Yahoo feed. A paid Databento feed can still be selected locally with `TEMPLATE_DATA_PROVIDER=databento`, but it is not required by the public deployment.
+GitHub Pages cannot run Flask, so the Pages version reads generated snapshots. The included workflow requests a fresh snapshot every five minutes, preferring configured Webull OpenAPI futures data and falling back to explicitly labeled delayed Yahoo planning data. A paid Databento feed can still be selected locally with `TEMPLATE_DATA_PROVIDER=databento`, but it is not required by the public deployment.
 
 For trading-grade data:
 

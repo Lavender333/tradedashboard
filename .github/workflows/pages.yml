@@ -54,7 +54,8 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p dist/data
-          cp index.html trading-template.html trading-template-es.html trading-template-zb.html market-selector.js .nojekyll dist/
+          cp index.html trade-board.html trading-template.html trading-template-es.html trading-template-zb.html market-selector.js .nojekyll dist/
+          cp -R assets dist/
           cp data/snapshot.json data/template-snapshot.json data/template-snapshot.js data/economic-calendar.json dist/data/
 
       - name: Configure Pages
