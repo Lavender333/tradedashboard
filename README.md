@@ -73,6 +73,8 @@ Webull setup:
 
 The displayed current price always includes its provider symbol, Eastern timestamp, source, delay status, and age. Five-minute feed bars drive the displayed price and confirmation checks; 20-minute bars drive ATR and Bollinger calculations. RTH VWAP begins at 9:30 a.m. ET, the opening range completes at 10:00 a.m. ET, and overnight levels use only the current CME trade date.
 
+When live Webull data passes the quality gate, the execution engine waits for a completed five-minute breakout, subsequent retest, and confirming candle. It then publishes the confirmation close as the direct entry, a stop beyond the retest structure, Target 1 at 1R, Target 2 at 2R, and explicit exit instructions. Stops below 0.25 ATR or above 1.0 ATR and Bollinger chase conditions are rejected. Delayed fallback data can never publish an executable trade.
+
 - Daily ES-vs-ZB six-point selection at the 8:10 ET (ZB) and 9:20 ET (ES) checkpoints, using HTF direction, true EMA 20/50 alignment, VWAP, key-level proximity, ATR-normalized target room, and one-to-two completed five-minute closes
 - A `TRADE`, `WATCH`, `WAIT`, or `SKIP BOTH` recommendation before the detailed 100-point worksheet and institutional gate
 - ES and ZB current price context

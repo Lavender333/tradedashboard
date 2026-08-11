@@ -1549,7 +1549,7 @@
         ? "No day trade until the latest candle is fresh."
         : direction === "No Trade"
           ? esPlan.summary
-          : `Use ${auto.entry_type || "confirmed setup"} only if the gate remains valid.`;
+          : `${auto.exit_plan || `Use ${auto.entry_type || "confirmed setup"} only if the gate remains valid.`}`;
       setText("final-direction", direction);
       setText("final-entry", entry);
       setText("final-time", time);

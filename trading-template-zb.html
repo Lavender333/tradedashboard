@@ -1623,19 +1623,13 @@
       const candidates = zbEntryCandidates(snapshot, context);
       const stale = context.data_status === "stale";
       const direction = stale ? "No Trade" : auto.direction || "No Trade";
-      const entry = direction === "No Trade"
-        ? "-"
-        : candidates.best
-          ? `${candidates.best.type}: ${candidates.best.price}`
-          : "No entry yet. Wait for 85+ acceptance retest.";
+      const entry = direction === "No Trade" ? "-" : zbFmt(auto.entry);
       const time = stale ? "Wait for fresh market data" : timeWindowLabel(snapshot, context.name || selectedInstrumentKey());
       const note = stale
         ? "No day trade until the latest candle is fresh."
         : direction === "No Trade"
           ? "No day trade. Wait for a cleaner setup."
-          : candidates.best
-            ? `Best single trade: ${candidates.best.type} at ${candidates.best.price}. Stop ${candidates.best.stop}. Target 1 ${candidates.best.target1}.`
-            : `No entry now. Today's computed breakout ${zbFmt(ladder.breakout)}; execution zone ${zbFmt(ladder.zoneLow)} - ${zbFmt(ladder.zoneHigh)}; wait for acceptance and retest.`;
+          : auto.exit_plan || `No entry now. Today's computed breakout ${zbFmt(ladder.breakout)}; wait for acceptance and retest.`;
       setText("final-direction", direction);
       setText("final-entry", entry);
       setText("final-time", time);
@@ -1643,7 +1637,7 @@
       const finalBox = document.getElementById("final-output-box");
       if (finalBox) {
         finalBox.textContent = `Final Output: ${direction} · Entry ${entry} · Time ${time}`;
-        finalBox.className = "gate-status " + (direction === "No Trade" || !candidates.best ? "bad" : "good");
+        finalBox.className = "gate-status " + (direction === "No Trade" || !auto.setup_confirmed ? "bad" : "good");
       }
     }
 
@@ -2174,10 +2168,10 @@
       setText("execution-confirmation", ladder.confirmation);
       setText("execution-stop", ladder.stopDisplay || zbFmt(ladder.stop));
       setText("execution-scale", ladder.scale);
-      setAutoValue("trade-entry", "Waiting for 5m confirmation");
-      setAutoValue("trade-stop", "Unknown until retest forms");
-      setAutoValue("trade-target-1", "Calculated after entry + stop");
-      setAutoValue("trade-target-2", "Calculated after entry + stop");
+      setAutoValue("trade-entry", auto.setup_confirmed ? zbFmt(auto.entry) : "Waiting for 5m confirmation");
+      setAutoValue("trade-stop", auto.setup_confirmed ? zbFmt(auto.stop) : "Unknown until retest forms");
+      setAutoValue("trade-target-1", auto.setup_confirmed ? zbFmt(auto.target1) : "Calculated after entry + stop");
+      setAutoValue("trade-target-2", auto.setup_confirmed ? zbFmt(auto.target2) : "Calculated after entry + stop");
     }
 
     function setAutoChecked(name, checked) {

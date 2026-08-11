@@ -566,6 +566,84 @@ def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: fl
     return [{"rank": index + 1, "setup": setup, "watch_level": round_price(level), "trigger": trigger, "status": "WAITING FOR CONFIRMATION"} for index, (setup, level, trigger) in enumerate(usable)]
 
 
+def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], rows: List[Dict], atr_value, bb_position, generated_at: datetime, data_quality_pass: bool) -> Dict:
+    pending = {
+        "confirmed": False,
+        "direction": "No Trade",
+        "status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
+        "entry": None,
+        "stop": None,
+        "target1": None,
+        "target2": None,
+        "risk_points": None,
+        "rr1": None,
+        "rr2": None,
+        "exit_plan": "No position. Wait for confirmation.",
+    }
+    if not data_quality_pass:
+        pending["status"] = "NO TRADE — LIVE DATA QUALITY GATE FAILED"
+        return pending
+    if htf_result not in {"Bullish", "Bearish"} or not watch_levels or not atr_value:
+        pending["status"] = "NO TRADE — DIRECTION OR INDICATORS NOT READY"
+        return pending
+
+    completed = [row for row in rows if row["time"] + timedelta(minutes=5) <= generated_at][-24:]
+    if len(completed) < 3:
+        return pending
+    long_side = htf_result == "Bullish"
+    tick = 0.25 if name == "ES" else 1 / 32
+    acceptance = 2 * tick
+    retest_above = 4 * tick
+    retest_below = 6 * tick
+
+    for watch in watch_levels:
+        level = float(watch["watch_level"])
+        for break_index in range(len(completed) - 1):
+            breakout_bar = completed[break_index]
+            broke = breakout_bar["close"] >= level + acceptance if long_side else breakout_bar["close"] <= level - acceptance
+            if not broke:
+                continue
+            for confirm_index in range(break_index + 1, len(completed)):
+                bar = completed[confirm_index]
+                if long_side:
+                    retested = level - retest_below <= bar["low"] <= level + retest_above
+                    confirmed = retested and bar["close"] > level and bar["close"] > bar["open"]
+                else:
+                    retested = level - retest_above <= bar["high"] <= level + retest_below
+                    confirmed = retested and bar["close"] < level and bar["close"] < bar["open"]
+                if not confirmed:
+                    continue
+                entry = float(bar["close"])
+                structure_rows = completed[max(break_index, confirm_index - 2):confirm_index + 1]
+                stop = min(item["low"] for item in structure_rows) - tick if long_side else max(item["high"] for item in structure_rows) + tick
+                risk = entry - stop if long_side else stop - entry
+                atr_ratio = risk / float(atr_value)
+                chase_failed = (long_side and bb_position is not None and bb_position > 0.85) or (not long_side and bb_position is not None and bb_position < 0.15)
+                if risk <= 0 or atr_ratio < 0.25 or atr_ratio > 1.0 or chase_failed:
+                    continue
+                target1 = entry + risk if long_side else entry - risk
+                target2 = entry + 2 * risk if long_side else entry - 2 * risk
+                direction = "Long Only" if long_side else "Short Only"
+                return {
+                    "confirmed": True,
+                    "direction": direction,
+                    "status": f"CONFIRMED {direction.upper()} — {watch['setup']}",
+                    "setup": watch["setup"],
+                    "watch_level": round_price(level),
+                    "entry": round_price(entry),
+                    "stop": round_price(stop),
+                    "target1": round_price(target1),
+                    "target2": round_price(target2),
+                    "risk_points": round_price(risk),
+                    "atr_risk_ratio": round(atr_ratio, 3),
+                    "rr1": 1.0,
+                    "rr2": 2.0,
+                    "confirmation_time": bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
+                    "exit_plan": f"Exit if stop {round_price(stop)} trades. Scale at {round_price(target1)} (1R); exit remainder at {round_price(target2)} (2R) or move stop per plan.",
+                }
+    return pending
+
+
 def ny_time(row: Dict):
     return row["time"].astimezone(ZoneInfo("America/New_York"))
 
@@ -919,8 +997,17 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     correct_date = trade_date_for_row(five_minute[-1]) == trade_date_for_datetime(generated_at)
     indicators_ready = vwap_value is not None and intraday_atr is not None and bands["middle"] is not None
     data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready
-    decision = trade_decision(rate_result, htf_result, False)
     watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
+    trade_setup = confirmed_trade_setup(
+        name, htf_result, watch_levels, five_minute, intraday_atr, bb_position, generated_at, data_quality_pass
+    )
+    decision = trade_decision(rate_result, htf_result, data_quality_pass)
+    if trade_setup["confirmed"]:
+        decision["direction"] = trade_setup["direction"]
+        decision["trade_plan_score"] = 5
+    else:
+        decision["direction"] = "No Trade"
+        decision["trade_plan_score"] = 0
     selector = market_selector(
         name,
         generated_at,
@@ -937,12 +1024,18 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     auto = {
         "direction": decision["direction"],
         "delta_result": "Mixed",
-        "entry_type": "Watch Zone → Trigger → Actual Entry",
-        "entry": None,
-        "stop": None,
-        "target1": None,
-        "target2": None,
-        "setup_status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
+        "entry_type": trade_setup.get("setup") or "Watch Zone → Trigger → Actual Entry",
+        "entry": trade_setup["entry"],
+        "stop": trade_setup["stop"],
+        "target1": trade_setup["target1"],
+        "target2": trade_setup["target2"],
+        "risk_points": trade_setup["risk_points"],
+        "rr1": trade_setup["rr1"],
+        "rr2": trade_setup["rr2"],
+        "exit_plan": trade_setup["exit_plan"],
+        "confirmation_time": trade_setup.get("confirmation_time"),
+        "setup_confirmed": trade_setup["confirmed"],
+        "setup_status": trade_setup["status"],
         "watch_levels": watch_levels,
         "liquidity_shift": "N/A — order-flow feed not connected",
         "order_flow_result": "Not Connected",
