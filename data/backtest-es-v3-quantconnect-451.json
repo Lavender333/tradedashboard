@@ -1,0 +1,61 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "backtest": "Upgraded Fluorescent Orange Cat",
+  "algorithm_id": "84b65763fef8b4963aa5569fffcfba5c",
+  "engine": "ES V3 LOCKED",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "evaluation_start": "2024-08-13",
+  "requested_evaluation_end": "2026-08-10",
+  "last_available_data_date": "2026-05-14",
+  "completed_rth_sessions": 451,
+  "trades": 44,
+  "wins": 15,
+  "losses": 29,
+  "win_rate": 34.09,
+  "net_r": -7.001,
+  "expectancy_r": -0.159,
+  "profit_factor": 0.735,
+  "max_drawdown_r": 12.444,
+  "costs": "$5 round turn + 1 ES tick entry + 1 ES tick exit",
+  "validation_pass": false,
+  "setup_results": {
+    "Opening Range Breakdown Retest": {
+      "trades": 6,
+      "wins": 1,
+      "net_r": -2.745,
+      "profit_factor": 0.346
+    },
+    "Opening Range Breakout Retest": {
+      "trades": 29,
+      "wins": 9,
+      "net_r": -8.567,
+      "profit_factor": 0.57
+    },
+    "Overnight High Breakout Retest": {
+      "trades": 4,
+      "wins": 3,
+      "net_r": 3.564,
+      "profit_factor": 22.116
+    },
+    "Overnight Low Breakdown Retest": {
+      "trades": 5,
+      "wins": 2,
+      "net_r": 0.747,
+      "profit_factor": 1.35
+    }
+  },
+  "rejected_counts": {
+    "HTF_DIRECTION_NOT_READY": 1037,
+    "NO_LEVEL_CONFIRMATION": 15197,
+    "CONFIRMATION_BODY_ABOVE_0.35_ATR": 1638,
+    "LONG_BB_OUTSIDE_0.60_0.75": 2182,
+    "NO_PRIOR_ACCEPTED_BREAK_RETEST": 300,
+    "STRUCTURAL_RISK_BELOW_0.45_ATR": 43,
+    "SHORT_BB_CHASE_BELOW_0.15": 411,
+    "STRUCTURAL_RISK_ABOVE_1.0_ATR": 31
+  },
+  "trade_log_status": "QuantConnect's free account capped backtest logs at 10 KB. Aggregate metrics and setup totals above are complete; the per-trade log was truncated by the platform.",
+  "conclusion": "FAIL: profit factor is below 1.5, expectancy is negative, and net R is negative. Do not enable automatic execution from this rule set."
+}
