@@ -32,17 +32,17 @@
     "summary": "ES/ZB: Yahoo Finance delayed backup; all futures technicals calculated locally from that feed. VIX and Treasury yields are delayed context. Macro events are tagged to official sources."
   },
   "economic_calendar": [],
-  "generated_at": "2026-08-11 04:07 UTC",
+  "generated_at": "2026-08-11 04:10 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 4.7,
-      "atr_20m": 4.7,
+      "atr_15m": 4.72,
+      "atr_20m": 4.72,
       "atr_daily": 93.08,
       "automation": {
         "anchored_vwap_2day": 7779.36,
-        "anchored_vwap_2day_distance": 7.14,
+        "anchored_vwap_2day_distance": 7.39,
         "anchored_vwap_2day_position": "Above",
-        "bb_position": 0.894,
+        "bb_position": 0.904,
         "chase_filter": "LONG CHASE \u2014 wait for pullback/retest",
         "confirmation_time": null,
         "data_quality_pass": false,
@@ -53,6 +53,7 @@
         "entry_type": "Watch Zone \u2192 Trigger \u2192 Actual Entry",
         "exit_plan": "No position. Wait for confirmation.",
         "liquidity_shift": "N/A \u2014 order-flow feed not connected",
+        "market_hours_pass": false,
         "order_flow_result": "Not Connected",
         "order_flow_score": null,
         "risk_points": null,
@@ -94,9 +95,9 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 7767.46,
-        "middle": 7778.11,
-        "upper": 7788.76
+        "lower": 7767.44,
+        "middle": 7778.12,
+        "upper": 7788.81
       },
       "contract_selection": {
         "mode": "Yahoo continuous fallback",
@@ -109,10 +110,10 @@
         "ema50": 7511.73
       },
       "higher_timeframe_trend": "Bullish",
-      "last": 7786.5,
+      "last": 7786.75,
       "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 03:57 UTC",
-      "last_time_et": "2026-08-10 11:57 PM ET",
+      "last_time": "2026-08-11 03:59 UTC",
+      "last_time_et": "2026-08-10 11:59 PM ET",
       "monthly_high": 7632.0,
       "monthly_low": 7324.0,
       "monthly_trend": {
@@ -137,7 +138,7 @@
         "open_confirmation": "Waiting for RTH open confirmation",
         "overnight_direction": "Recovered / Bullish",
         "overnight_high": 7786.75,
-        "overnight_last": 7786.5,
+        "overnight_last": 7786.75,
         "overnight_low": 7766.5,
         "position": "Inside overnight range",
         "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
@@ -163,15 +164,15 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_high 7786.75; distance 0.25",
+            "evidence": "Nearest: overnight_high 7786.75; distance 0.0",
             "pass": true
           },
           "room_to_target": {
-            "evidence": "Next: previous_week_high 7820.25; room 33.75",
+            "evidence": "Next: previous_week_high 7820.25; room 33.5",
             "pass": true
           },
           "vwap_alignment": {
-            "evidence": "Price 7786.5 vs VWAP None",
+            "evidence": "Price 7786.75 vs VWAP None",
             "pass": false
           }
         },
@@ -185,8 +186,8 @@
         "rating": "STALE",
         "ready": false,
         "score": 4,
-        "target_room": 33.75,
-        "target_room_atr": 7.178,
+        "target_room": 33.5,
+        "target_room_atr": 7.098,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -223,6 +224,7 @@
         "entry_type": "Watch Zone \u2192 Trigger \u2192 Actual Entry",
         "exit_plan": "No position. Wait for confirmation.",
         "liquidity_shift": "N/A \u2014 order-flow feed not connected",
+        "market_hours_pass": false,
         "order_flow_result": "Not Connected",
         "order_flow_score": null,
         "risk_points": null,
@@ -281,8 +283,8 @@
       "higher_timeframe_trend": "Bearish",
       "last": 108.69,
       "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 03:57 UTC",
-      "last_time_et": "2026-08-10 11:57 PM ET",
+      "last_time": "2026-08-11 03:59 UTC",
+      "last_time_et": "2026-08-10 11:59 PM ET",
       "monthly_high": 112.91,
       "monthly_low": 108.25,
       "monthly_trend": {

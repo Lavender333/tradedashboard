@@ -996,7 +996,10 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     }
     correct_date = trade_date_for_row(five_minute[-1]) == trade_date_for_datetime(generated_at)
     indicators_ready = vwap_value is not None and intraday_atr is not None and bands["middle"] is not None
-    data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready
+    now_et = generated_at.astimezone(ZoneInfo("America/New_York"))
+    now_minutes = now_et.hour * 60 + now_et.minute
+    market_hours_pass = now_et.weekday() < 5 and 9 * 60 + 30 <= now_minutes < 16 * 60
+    data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready and market_hours_pass
     watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
     trade_setup = confirmed_trade_setup(
         name, htf_result, watch_levels, five_minute, intraday_atr, bb_position, generated_at, data_quality_pass
@@ -1059,7 +1062,8 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "bb_position": None if bb_position is None else round(bb_position, 3),
         "chase_filter": chase_status,
         "data_quality_pass": data_quality_pass,
-        "data_quality_reason": "PASS" if data_quality_pass else ("DELAYED DATA — Planning Only" if not source_live else "Execution confirmation feed not current"),
+        "market_hours_pass": market_hours_pass,
+        "data_quality_reason": "PASS" if data_quality_pass else ("DELAYED DATA — Planning Only" if not source_live else "OUTSIDE MONDAY–FRIDAY 9:30 AM–4:00 PM ET" if not market_hours_pass else "Execution confirmation feed not current"),
     }
 
     return {
