@@ -66,6 +66,8 @@ https://lavender333.github.io/tradedashboard/trading-template-zb.html
 
 The ES/ZB template prefers Webull OpenAPI futures data. It automatically selects the active ES and ZB contracts, builds 20-minute candles, and calculates all technicals locally from that single synchronized feed. If Webull is unavailable, Yahoo is an explicitly labeled delayed planning fallback and execution remains blocked.
 
+The dashboard also supports a secure Charles Schwab current-quote overlay through the Cloudflare Worker in [worker/README.md](worker/README.md). OAuth credentials and tokens stay in the Worker; GitHub Pages receives only normalized ES/ZB quote fields. A newer Schwab quote changes the displayed current price but never upgrades the older five-minute strategy calculation snapshot or its execution gate.
+
 Webull setup:
 
 1. Enable Webull OpenAPI and purchase the separate OpenAPI futures market-data subscription.

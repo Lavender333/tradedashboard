@@ -1,0 +1,5 @@
+# Non-working local examples only. Copy this file to .dev.vars and replace
+# the values locally. Never commit .dev.vars or real Schwab credentials.
+SCHWAB_CLIENT_ID=example-client-id
+SCHWAB_CLIENT_SECRET=example-client-secret
+SCHWAB_CALLBACK_URL=http://localhost:8787/schwab/callback

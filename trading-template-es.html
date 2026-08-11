@@ -1082,6 +1082,7 @@
 
   <script src="data/template-snapshot.js"></script>
   <script src="market-selector.js"></script>
+  <script src="market-data-client.js"></script>
   <script>
     const scoreGroups = ["macro", "trend", "trendPro", "structure", "orderFlow", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
@@ -1244,6 +1245,23 @@
         hour12: true
       }).format(snapshotDate(snapshot));
       return `Generated ${eastern} ET (${generated})`;
+    }
+
+    function liveQuoteLabel(context) {
+      const quote = context?.live_quote;
+      if (!quote) return null;
+      const time = new Date(quote.quote_time);
+      const timeEt = Number.isNaN(time.getTime()) ? quote.quote_time : time.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+      }) + " ET";
+      return { ...quote, timeEt };
     }
 
     function eventDateKey(event) {
@@ -1898,6 +1916,8 @@
 
       const key = selectedInstrumentKey();
       const context = snapshot.instruments[key];
+      const esQuote = liveQuoteLabel(snapshot.instruments.ES);
+      const currentQuote = liveQuoteLabel(context);
       const vix = snapshot.volatility?.vix;
       const move = snapshot.volatility?.move;
       const providerText = snapshot.data_sources?.summary || snapshot.provider || "Automated";
@@ -1907,9 +1927,11 @@
       document.getElementById("auto-status").textContent = statusText;
       document.getElementById("auto-generated").textContent = generatedLabel(snapshot);
       document.getElementById("auto-es").textContent =
-        `ES ${fmt(snapshot.instruments.ES.last)} · ${snapshot.instruments.ES.symbol} · ${snapshot.instruments.ES.last_time_et || snapshot.instruments.ES.last_time}`;
+        `ES ${fmt(esQuote?.last ?? snapshot.instruments.ES.last)} · ${esQuote?.symbol || snapshot.instruments.ES.symbol} · ${esQuote?.timeEt || snapshot.instruments.ES.last_time_et || snapshot.instruments.ES.last_time}`;
       document.getElementById("auto-es-note").textContent =
-        `${snapshot.instruments.ES.price_source} · ${snapshot.instruments.ES.data_status} · age ${snapshot.instruments.ES.last_candle_age_minutes}m`;
+        esQuote
+          ? `${esQuote.source}${esQuote.delayed ? " · delayed" : " · live quote"} · strategy calculations remain ${snapshot.instruments.ES.price_source}`
+          : `${snapshot.instruments.ES.price_source} · ${snapshot.instruments.ES.data_status} · age ${snapshot.instruments.ES.last_candle_age_minutes}m`;
       document.getElementById("auto-zb").textContent =
         `ZB ${fmt(snapshot.instruments.ZB.last)} · ${snapshot.instruments.ZB.trend.result}`;
       document.getElementById("auto-zb-note").textContent =
@@ -1953,7 +1975,9 @@
       setAutoValue("monthly-trend-score", professionalTrend.monthly ?? 0);
       setAutoValue("monthly-high", fmt(context.monthly_high));
       setAutoValue("monthly-low", fmt(context.monthly_low));
-      setAutoValue("current-price", `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider} · ${context.contract_selection?.mode || "provider contract"}`);
+      setAutoValue("current-price", currentQuote
+        ? `${fmt(currentQuote.last)} · ${currentQuote.symbol} · ${currentQuote.timeEt} · ${currentQuote.source}${currentQuote.delayed ? " · delayed" : " · live quote"} · calculations use ${context.price_source}`
+        : `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider} · ${context.contract_selection?.mode || "provider contract"}`);
       setAutoValue("trend-pro-daily-bullish-level", fmt(auto.trend_pro_daily_bullish_level));
       setAutoValue("trend-pro-daily-bearish-level", fmt(auto.trend_pro_daily_bearish_level));
       setAutoValue("trend-pro-240-bullish-level", fmt(auto.trend_pro_240_bullish_level));
@@ -2035,25 +2059,26 @@
       try {
         document.getElementById("auto-status").textContent = "Refreshing...";
         document.getElementById("auto-generated").textContent = "Requesting latest market snapshot.";
-        const [response, economicCalendar] = await Promise.all([
-          fetch(dataUrl("data/template-snapshot.json"), { cache: "no-store" }),
+        const [marketResult, economicCalendar] = await Promise.all([
+          window.MarketDataClient.loadSnapshot(dataUrl("data/template-snapshot.json")),
           loadEconomicCalendar()
         ]);
-        if (!response.ok) throw new Error("Snapshot unavailable");
-        const snapshot = await response.json();
+        const snapshot = marketResult.snapshot;
         if (!Array.isArray(snapshot.economic_calendar)) {
           snapshot.economic_calendar = economicCalendar;
         }
-        const changed = loadedAutomationTimestamp !== null && loadedAutomationTimestamp !== snapshot.generated_at;
-        loadedAutomationTimestamp = snapshot.generated_at;
+        const version = `${snapshot.generated_at}|${snapshot.live_quote_generated_at || ""}`;
+        const changed = loadedAutomationTimestamp !== null && loadedAutomationTimestamp !== version;
+        loadedAutomationTimestamp = version;
         window.templateSnapshot = snapshot;
         applyTemplateSnapshot(snapshot);
         const checkedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
         const generatedText = document.getElementById("auto-generated").textContent;
+        const quoteMessage = marketResult.live ? "Schwab quote checked" : "Schwab unavailable; published calculation snapshot retained";
         const refreshMessage = manual
           ? changed ? "New snapshot loaded" : "Already showing the latest published snapshot"
           : "Automatic check complete";
-        document.getElementById("auto-generated").textContent = `${generatedText} · ${refreshMessage} · checked ${checkedAt}`;
+        document.getElementById("auto-generated").textContent = `${generatedText} · ${quoteMessage} · ${refreshMessage} · checked ${checkedAt}`;
         if (manual) {
           button.textContent = changed ? "New data loaded ✓" : "Latest checked ✓";
           window.setTimeout(() => { button.textContent = "Refresh Auto Data"; }, 1800);

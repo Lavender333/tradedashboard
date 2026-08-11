@@ -2,7 +2,8 @@
   "name": "tradedashboard-seasonality",
   "private": true,
   "scripts": {
-    "build:seasonality": "esbuild src/main.tsx --bundle --minify --format=esm --target=es2020 --outfile=assets/seasonality-app.js"
+    "build:seasonality": "esbuild src/main.tsx --bundle --minify --format=esm --target=es2020 --outfile=assets/seasonality-app.js",
+    "test:schwab-worker": "node worker/test.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",
