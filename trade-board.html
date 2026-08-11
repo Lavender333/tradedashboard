@@ -65,6 +65,13 @@
   const val = (value, fallback='—') => value === null || value === undefined || value === '' ? fallback : value;
   const fmt = (value) => value === null || value === undefined ? '—' : Number(value).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
   const esc = (value) => String(val(value)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const utcDate = (value) => value ? new Date(value.replace(' UTC','Z').replace(' ','T')) : null;
+  const currentAgeMinutes = (value, fallback) => {
+    const time = utcDate(value);
+    return time && !Number.isNaN(time.getTime())
+      ? Math.max(0, Math.floor((Date.now() - time.getTime()) / 60000))
+      : fallback;
+  };
 
   function card(name, item) {
     const auto = item.automation || {};
@@ -73,6 +80,7 @@
     const statusClass = confirmed ? 'good' : quality ? 'wait' : 'bad';
     const status = confirmed ? `${auto.direction || 'TRADE'} CONFIRMED` : quality ? auto.setup_status : 'NO TRADE';
     const contract = item.contract_selection?.symbol || item.symbol || name;
+    const liveAge = currentAgeMinutes(item.last_time, item.last_candle_age_minutes);
     const watches = (auto.watch_levels || []).slice(0,3).map(w => `<div class="watchrow"><span>#${esc(w.rank)} ${esc(w.setup)}</span><strong>${fmt(w.watch_level)}</strong></div>`).join('') || '<div class="muted">No watch levels available.</div>';
     return `<article class="card ${quality ? 'live' : ''}">
       <div class="cardhead"><div><div class="instrument">${esc(name)}</div><div class="contract">Contract ${esc(contract)} · ${esc(item.price_source)}</div></div><div class="price">${fmt(item.last)}<time>Price time ${esc(item.last_time_et)}</time></div></div>
@@ -81,7 +89,7 @@
         <div class="steps"><div class="step">Breakout<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">Retest<strong>${confirmed ? '✓' : 'WAIT'}</strong></div><div class="step">5m close<strong>${confirmed ? '✓' : 'WAIT'}</strong></div></div>
         <div class="levels"><div class="level"><span class="label">Entry</span><b>${fmt(auto.entry)}</b></div><div class="level"><span class="label">Stop</span><b>${fmt(auto.stop)}</b></div><div class="level"><span class="label">Target 1</span><b>${fmt(auto.target1)}</b></div><div class="level"><span class="label">Target 2</span><b>${fmt(auto.target2)}</b></div></div>
         <div class="watch"><div class="label">Ranked watch levels — not entries</div>${watches}</div>
-        <div class="checks"><div class="check"><span>Bias</span>${esc(auto.todays_bias || item.higher_timeframe_trend)}</div><div class="check"><span>20m ATR(14)</span>${fmt(item.atr_20m)}</div><div class="check"><span>VWAP</span>${auto.vwap == null ? esc(auto.vwap_position || 'Not ready') : `${fmt(auto.vwap)} · ${esc(auto.vwap_position)}`}</div><div class="check"><span>Chase filter</span>${esc(auto.chase_filter)}</div><div class="check"><span>Data gate</span>${quality ? 'PASS' : esc(auto.data_quality_reason)}</div><div class="check"><span>Data age</span>${esc(item.last_candle_age_minutes)} min</div></div>
+        <div class="checks"><div class="check"><span>Bias</span>${esc(auto.todays_bias || item.higher_timeframe_trend)}</div><div class="check"><span>20m ATR(14)</span>${fmt(item.atr_20m)}</div><div class="check"><span>VWAP</span>${auto.vwap == null ? esc(auto.vwap_position || 'Not ready') : `${fmt(auto.vwap)} · ${esc(auto.vwap_position)}`}</div><div class="check"><span>Chase filter</span>${esc(auto.chase_filter)}</div><div class="check"><span>Data gate</span>${quality ? 'PASS' : esc(auto.data_quality_reason)}</div><div class="check"><span>Data age now</span>${esc(liveAge)} min</div></div>
       </div>
     </article>`;
   }
@@ -103,11 +111,12 @@
       const instruments = data.instruments || {};
       $('#board').innerHTML = ['ES','ZB'].map(name => card(name, instruments[name] || {})).join('');
       const live = ['ES','ZB'].some(name => instruments[name]?.automation?.data_quality_pass);
+      const snapshotAge = currentAgeMinutes(data.generated_at, null);
       const checkedAt = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit', second:'2-digit'});
       const checkMessage = manual
         ? changed ? 'New snapshot loaded' : 'Already showing the latest published snapshot'
         : 'Automatic check complete';
-      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:${live ? 'var(--green)' : 'var(--amber)'}"></i>${live ? 'Live confirmation available' : 'Planning only / no live confirmation'}</span><span>Provider: <strong>${esc(data.provider)}</strong></span><span>Snapshot: <strong>${esc(data.generated_at)}</strong></span><span><strong>${checkMessage}</strong> · checked ${esc(checkedAt)}</span>`;
+      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:${live ? 'var(--green)' : 'var(--amber)'}"></i>${live ? 'Live confirmation available' : 'Planning only / no live confirmation'}</span><span>Provider: <strong>${esc(data.provider)}</strong></span><span>Snapshot: <strong>${esc(data.generated_at)}</strong>${snapshotAge == null ? '' : ` · ${esc(snapshotAge)} min old`}</span><span><strong>${checkMessage}</strong> · checked ${esc(checkedAt)}</span>`;
       if (manual) {
         button.textContent = 'Refreshed ✓';
         window.setTimeout(() => { button.textContent = 'Refresh now'; }, 1500);
