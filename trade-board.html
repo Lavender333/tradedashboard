@@ -15,6 +15,7 @@
     .subtitle { margin-top:4px; }
     .links { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     a,button { color:var(--text); background:#1a1e2d; border:1px solid var(--line); border-radius:10px; padding:9px 12px; text-decoration:none; cursor:pointer; }
+    button:disabled { cursor:wait; opacity:.72; }
     button:hover,a:hover { border-color:var(--lav); }
     .sourcebar { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:13px 16px; background:#10131d; border:1px solid var(--line); border-radius:14px; margin-bottom:18px; }
     .dot { width:9px; height:9px; border-radius:50%; display:inline-block; background:var(--amber); margin-right:7px; }
@@ -85,20 +86,40 @@
     </article>`;
   }
 
-  async function load() {
+  let loadedSnapshot = null;
+
+  async function load(manual = false) {
+    const button = $('#refresh');
+    if (manual) {
+      button.disabled = true;
+      button.textContent = 'Refreshing…';
+    }
     try {
       const response = await fetch(`data/template-snapshot.json?t=${Date.now()}`, {cache:'no-store'});
       if (!response.ok) throw new Error(`Snapshot unavailable (${response.status})`);
       const data = await response.json();
+      const changed = loadedSnapshot !== null && loadedSnapshot !== data.generated_at;
+      loadedSnapshot = data.generated_at;
       const instruments = data.instruments || {};
       $('#board').innerHTML = ['ES','ZB'].map(name => card(name, instruments[name] || {})).join('');
       const live = ['ES','ZB'].some(name => instruments[name]?.automation?.data_quality_pass);
-      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:${live ? 'var(--green)' : 'var(--amber)'}"></i>${live ? 'Live confirmation available' : 'Planning only / no live confirmation'}</span><span>Provider: <strong>${esc(data.provider)}</strong></span><span>Snapshot: <strong>${esc(data.generated_at)}</strong></span><span>Board checks for updates every minute</span>`;
+      const checkedAt = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit', second:'2-digit'});
+      const checkMessage = manual
+        ? changed ? 'New snapshot loaded' : 'Already showing the latest published snapshot'
+        : 'Automatic check complete';
+      $('#sourcebar').innerHTML = `<span><i class="dot" style="background:${live ? 'var(--green)' : 'var(--amber)'}"></i>${live ? 'Live confirmation available' : 'Planning only / no live confirmation'}</span><span>Provider: <strong>${esc(data.provider)}</strong></span><span>Snapshot: <strong>${esc(data.generated_at)}</strong></span><span><strong>${checkMessage}</strong> · checked ${esc(checkedAt)}</span>`;
+      if (manual) {
+        button.textContent = 'Refreshed ✓';
+        window.setTimeout(() => { button.textContent = 'Refresh now'; }, 1500);
+      }
     } catch (error) {
       $('#board').innerHTML = `<div class="error">Could not load the decision board: ${esc(error.message)}</div>`;
+      if (manual) button.textContent = 'Refresh failed — retry';
+    } finally {
+      if (manual) button.disabled = false;
     }
   }
-  $('#refresh').addEventListener('click', load);
+  $('#refresh').addEventListener('click', () => load(true));
   load();
   setInterval(load, 60000);
 </script>
