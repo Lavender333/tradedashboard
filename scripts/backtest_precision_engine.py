@@ -1,12 +1,56 @@
 #!/usr/bin/env python3
-"""Ten-session, simulation-only backtest of the dashboard confirmation engine."""
+"""Configurable-session, simulation-only backtest of the dashboard confirmation engine."""
 
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timedelta, timezone
 
 import build_template_snapshot as engine
+
+
+def recent_five_minute_candles(symbol, calendar_days=59):
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=calendar_days)
+    payload = engine.get_json(
+        engine.YAHOO_URL.format(symbol=symbol),
+        params={
+            "period1": int(start.timestamp()),
+            "period2": int(end.timestamp()),
+            "interval": "5m",
+            "includePrePost": "true",
+        },
+        headers=engine.HEADERS,
+        timeout=30,
+    )
+    chart = payload.get("chart", {})
+    if chart.get("error"):
+        raise RuntimeError(f"{symbol}: {chart['error']}")
+    result = (chart.get("result") or [None])[0]
+    if not result:
+        raise RuntimeError(f"{symbol}: no chart data returned")
+    timestamps = result.get("timestamp") or []
+    quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+    rows = []
+    for index, timestamp in enumerate(timestamps):
+        try:
+            row = {
+                "time": datetime.fromtimestamp(timestamp, timezone.utc),
+                "open": quote["open"][index],
+                "high": quote["high"][index],
+                "low": quote["low"][index],
+                "close": quote["close"][index],
+                "volume": (quote.get("volume") or [0] * len(timestamps))[index] or 0,
+            }
+        except (IndexError, KeyError):
+            continue
+        if any(row[key] is None for key in ["open", "high", "low", "close"]):
+            continue
+        rows.append(row)
+    if not rows:
+        raise RuntimeError(f"{symbol}: no usable five-minute candles")
+    return rows
 
 
 def rth(row):
@@ -76,10 +120,10 @@ def outcome(setup, future, session_close):
     return {"result": "SESSION CLOSE", "r": round(max(-1.0, min(1.5, final_r)), 3), "t1": t1_hit, "t2": False}
 
 
-def backtest(name, symbol):
-    five = engine.candles(symbol, "1mo", "5m")
+def backtest(name, symbol, session_count):
+    five = recent_five_minute_candles(symbol)
     daily = engine.candles(symbol, "1y", "1d")
-    dates = completed_rth_dates(five)[-10:]
+    dates = completed_rth_dates(five)[-session_count:]
     trades = []
     no_trade_days = []
 
@@ -160,7 +204,13 @@ def backtest(name, symbol):
 
 
 def main():
-    results = [backtest("ES", "ES=F"), backtest("ZB", "ZB=F")]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sessions", type=int, default=10)
+    args = parser.parse_args()
+    if args.sessions < 1 or args.sessions > 40:
+        parser.error("--sessions must be between 1 and 40")
+
+    results = [backtest("ES", "ES=F", args.sessions), backtest("ZB", "ZB=F", args.sessions)]
     combined_trades = [trade for result in results for trade in result["trade_log"]]
     combined_wins = sum(trade["r"] for trade in combined_trades if trade["r"] > 0)
     combined_losses = -sum(trade["r"] for trade in combined_trades if trade["r"] < 0)
@@ -168,7 +218,7 @@ def main():
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "method": {
             "data": "Yahoo Finance continuous futures, five-minute historical bars",
-            "window": "Last 10 completed RTH sessions available",
+            "window": f"Last {args.sessions} completed RTH sessions available",
             "position_management": "50% at 1R, 50% at 2R; original stop retained",
             "intrabar_rule": "Stop first when stop and target occur in the same five-minute bar",
             "costs": "No commission or slippage",
