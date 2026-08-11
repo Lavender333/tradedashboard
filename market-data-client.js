@@ -1,5 +1,5 @@
 (function () {
-  const DEFAULT_API = "https://api.thetruelavender.online/api/market-snapshot";
+  const DEFAULT_API = "https://lavender-schwab-market-data.antoinetteqwilliams.workers.dev/api/market-snapshot";
 
   function configuredApi() {
     return window.LAVENDER_MARKET_API || DEFAULT_API;

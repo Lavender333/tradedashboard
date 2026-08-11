@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "lavender-schwab-market-data",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "vars": {
+    "SCHWAB_CALLBACK_URL": "https://lavender-schwab-market-data.antoinetteqwilliams.workers.dev/schwab/callback",
+    "SCHWAB_ES_SYMBOL": "/ES",
+    "SCHWAB_ZB_SYMBOL": "/ZB",
+    "ALLOWED_ORIGINS": "https://lavender333.github.io,http://localhost:8000,http://127.0.0.1:8000"
+  },
+  "kv_namespaces": [
+    { "binding": "SCHWAB_TOKENS" }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 }
+  }
+}

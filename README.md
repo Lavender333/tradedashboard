@@ -68,6 +68,8 @@ The ES/ZB template prefers Webull OpenAPI futures data. It automatically selects
 
 The dashboard also supports a secure Charles Schwab current-quote overlay through the Cloudflare Worker in [worker/README.md](worker/README.md). OAuth credentials and tokens stay in the Worker; GitHub Pages receives only normalized ES/ZB quote fields. A newer Schwab quote changes the displayed current price but never upgrades the older five-minute strategy calculation snapshot or its execution gate.
 
+The Worker and its KV storage are deployed at `https://lavender-schwab-market-data.antoinetteqwilliams.workers.dev`. It remains disconnected from Schwab until real credentials are entered directly into Cloudflare and OAuth is completed; the dashboard keeps its existing fallback during that state.
+
 Webull setup:
 
 1. Enable Webull OpenAPI and purchase the separate OpenAPI futures market-data subscription.
