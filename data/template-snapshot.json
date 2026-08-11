@@ -32,17 +32,17 @@
     "summary": "ES/ZB: Yahoo Finance delayed backup; all futures technicals calculated locally from that feed. VIX and Treasury yields are delayed context. Macro events are tagged to official sources."
   },
   "economic_calendar": [],
-  "generated_at": "2026-08-11 03:50 UTC",
+  "generated_at": "2026-08-11 03:54 UTC",
   "instruments": {
     "ES": {
-      "atr_15m": 4.52,
-      "atr_20m": 4.52,
+      "atr_15m": 4.61,
+      "atr_20m": 4.61,
       "atr_daily": 88.06,
       "automation": {
-        "anchored_vwap_2day": 7779.38,
-        "anchored_vwap_2day_distance": 8.87,
+        "anchored_vwap_2day": 7779.39,
+        "anchored_vwap_2day_distance": 8.61,
         "anchored_vwap_2day_position": "Above",
-        "bb_position": 0.885,
+        "bb_position": 0.876,
         "chase_filter": "LONG CHASE \u2014 wait for pullback/retest",
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
@@ -88,20 +88,25 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 7767.55,
-        "middle": 7779.25,
-        "upper": 7790.95
+        "lower": 7767.58,
+        "middle": 7779.24,
+        "upper": 7790.9
+      },
+      "contract_selection": {
+        "mode": "Yahoo continuous fallback",
+        "reason": "Webull unavailable or not configured",
+        "symbol": "ES=F"
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
-        "ema20": 7624.06,
-        "ema50": 7522.57
+        "ema20": 7624.04,
+        "ema50": 7522.56
       },
       "higher_timeframe_trend": "Bullish",
-      "last": 7788.25,
+      "last": 7788.0,
       "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 03:40 UTC",
-      "last_time_et": "2026-08-10 11:40 PM ET",
+      "last_time": "2026-08-11 03:44 UTC",
+      "last_time_et": "2026-08-10 11:44 PM ET",
       "monthly_high": 7632.0,
       "monthly_low": 7324.0,
       "monthly_trend": {
@@ -110,10 +115,10 @@
       },
       "moving_averages": {
         "ma100": 7313.09,
-        "ma20": 7581.61,
+        "ma20": 7581.6,
         "ma200": 7087.85,
-        "ma50": 7535.21,
-        "ma72": 7498.29
+        "ma50": 7535.2,
+        "ma72": 7498.28
       },
       "name": "ES",
       "opening_range_high": null,
@@ -126,7 +131,7 @@
         "open_confirmation": "Waiting for RTH open confirmation",
         "overnight_direction": "Recovered / Bullish",
         "overnight_high": 7789.25,
-        "overnight_last": 7788.25,
+        "overnight_last": 7788.0,
         "overnight_low": 7766.5,
         "position": "Inside overnight range",
         "summary": "Recovered / Bullish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
@@ -140,11 +145,11 @@
       "selector": {
         "checks": {
           "confirmed_reaction": {
-            "evidence": "2 five-minute close(s) vs 7789.25",
+            "evidence": "2 five-minute close(s) vs None",
             "pass": false
           },
           "ema_alignment": {
-            "evidence": "EMA20 7624.06 vs EMA50 7522.57",
+            "evidence": "EMA20 7624.04 vs EMA50 7522.56",
             "pass": true
           },
           "htf_direction": {
@@ -152,15 +157,15 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_high 7789.25; distance 1.0",
-            "pass": true
+            "evidence": "Nearest: overnight_high 7789.25; distance 1.25",
+            "pass": false
           },
           "room_to_target": {
-            "evidence": "Next: previous_day_high 7798.0; room 9.75",
-            "pass": true
+            "evidence": "Next: overnight_high 7789.25; room 1.25",
+            "pass": false
           },
           "vwap_alignment": {
-            "evidence": "Price 7788.25 vs VWAP None",
+            "evidence": "Price 7788.0 vs VWAP None",
             "pass": false
           }
         },
@@ -173,9 +178,9 @@
         "pivot": 7779.25,
         "rating": "STALE",
         "ready": true,
-        "score": 4,
-        "target_room": 9.75,
-        "target_room_atr": 2.158,
+        "score": 2,
+        "target_room": 1.25,
+        "target_room_atr": 0.271,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },
@@ -201,7 +206,7 @@
         "anchored_vwap_2day": null,
         "anchored_vwap_2day_distance": null,
         "anchored_vwap_2day_position": "Mixed",
-        "bb_position": 0.216,
+        "bb_position": 0.352,
         "chase_filter": "PASS \u2014 normal band position",
         "data_quality_pass": false,
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
@@ -220,8 +225,8 @@
         "todays_bias": "Bear",
         "trade_plan_score": 0,
         "trend_pro_240_bearish_level": 108.59,
-        "trend_pro_240_bullish_level": 108.81,
-        "trend_pro_daily_bearish_level": 108.66,
+        "trend_pro_240_bullish_level": 108.78,
+        "trend_pro_daily_bearish_level": 108.69,
         "trend_pro_daily_bullish_level": 109.66,
         "trend_pro_result": "Bearish",
         "trend_pro_score": 15,
@@ -247,9 +252,14 @@
         ]
       },
       "bollinger_20_2_20m": {
-        "lower": 108.6,
-        "middle": 108.73,
-        "upper": 108.86
+        "lower": 108.61,
+        "middle": 108.72,
+        "upper": 108.83
+      },
+      "contract_selection": {
+        "mode": "Yahoo continuous fallback",
+        "reason": "Webull unavailable or not configured",
+        "symbol": "ZB=F"
       },
       "data_status": "delayed",
       "exponential_moving_averages": {
@@ -257,10 +267,10 @@
         "ema50": 111.08
       },
       "higher_timeframe_trend": "Bearish",
-      "last": 108.66,
-      "last_candle_age_minutes": 10,
-      "last_time": "2026-08-11 03:39 UTC",
-      "last_time_et": "2026-08-10 11:39 PM ET",
+      "last": 108.69,
+      "last_candle_age_minutes": 11,
+      "last_time": "2026-08-11 03:43 UTC",
+      "last_time_et": "2026-08-10 11:43 PM ET",
       "monthly_high": 112.91,
       "monthly_low": 108.25,
       "monthly_trend": {
@@ -269,7 +279,7 @@
       },
       "moving_averages": {
         "ma100": 112.32,
-        "ma20": 109.9,
+        "ma20": 109.91,
         "ma200": 114.38,
         "ma50": 111.56,
         "ma72": 111.74
@@ -283,12 +293,12 @@
         "europe_direction": "Not enough Europe-session data",
         "inventory": "Short overnight inventory",
         "open_confirmation": "Waiting for RTH open confirmation",
-        "overnight_direction": "Weak / Bearish",
+        "overnight_direction": "Balanced",
         "overnight_high": 108.81,
-        "overnight_last": 108.66,
+        "overnight_last": 108.69,
         "overnight_low": 108.59,
         "position": "Inside overnight range",
-        "summary": "Weak / Bearish; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
+        "summary": "Balanced; Not enough Europe-session data; Inside overnight range; Waiting for RTH open confirmation. Pre-open context only."
       },
       "overnight_high": 108.81,
       "overnight_low": 108.59,
@@ -311,15 +321,15 @@
             "pass": true
           },
           "meaningful_level": {
-            "evidence": "Nearest: overnight_low 108.59; distance 0.06",
+            "evidence": "Nearest: previous_week_low 108.72; distance 0.03",
             "pass": false
           },
           "room_to_target": {
-            "evidence": "Next: overnight_low 108.59; room 0.06",
+            "evidence": "Next: overnight_low 108.59; room 0.09",
             "pass": true
           },
           "vwap_alignment": {
-            "evidence": "Price 108.66 vs VWAP None",
+            "evidence": "Price 108.69 vs VWAP None",
             "pass": false
           }
         },
@@ -333,8 +343,8 @@
         "rating": "STALE",
         "ready": true,
         "score": 3,
-        "target_room": 0.06,
-        "target_room_atr": 0.909,
+        "target_room": 0.09,
+        "target_room_atr": 1.419,
         "vwap_distance": null,
         "vwap_distance_atr": 0
       },

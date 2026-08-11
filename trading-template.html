@@ -1717,7 +1717,7 @@
       setAutoValue("monthly-trend-score", context.monthly_trend.score);
       setAutoValue("monthly-high", fmt(context.monthly_high));
       setAutoValue("monthly-low", fmt(context.monthly_low));
-      setAutoValue("current-price", `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider}`);
+      setAutoValue("current-price", `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider} · ${context.contract_selection?.mode || "provider contract"}`);
       setAutoValue("trend-pro-daily-bullish-level", fmt(auto.trend_pro_daily_bullish_level));
       setAutoValue("trend-pro-daily-bearish-level", fmt(auto.trend_pro_daily_bearish_level));
       setAutoValue("trend-pro-240-bullish-level", fmt(auto.trend_pro_240_bullish_level));

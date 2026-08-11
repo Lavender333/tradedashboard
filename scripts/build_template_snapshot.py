@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import calendar
 from html import unescape
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -61,6 +62,7 @@ WEBULL_SYMBOLS = {
 }
 ACTIVE_FUTURES_SOURCE = ""
 WEBULL_DATA_CLIENT = None
+CONTRACT_SELECTION = {}
 
 OFFICIAL_EVENT_SOURCES = [
     (re.compile(r"\b(jolts|job openings|payroll|nonfarm|nfp|unemployment|cpi|ppi|claims)\b", re.I), "BLS", "https://www.bls.gov/"),
@@ -218,6 +220,104 @@ def webull_candles(symbol: str, timespan: str, count: int) -> List[Dict]:
     return sorted(rows, key=lambda row: row["time"])
 
 
+def webull_result_items(payload) -> List[Dict]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    result = payload.get("result", payload.get("data", []))
+    if isinstance(result, list):
+        return [item for item in result if isinstance(item, dict)]
+    if isinstance(result, dict):
+        nested = result.get("result", result.get("data", []))
+        return [item for item in nested if isinstance(item, dict)] if isinstance(nested, list) else [result]
+    return []
+
+
+def contract_expiration(item: Dict):
+    raw = next((item.get(key) for key in ("expiration_date", "expire_date", "last_trade_date", "last_trading_date") if item.get(key)), None)
+    if not raw:
+        symbol = str(item.get("symbol") or item.get("ticker") or "")
+        match = re.search(r"([FGHJKMNQUVXZ])(\d)$", symbol)
+        if not match:
+            return None
+        month = {code: index for index, code in enumerate("FGHJKMNQUVXZ", start=1)}[match.group(1)]
+        now_year = datetime.now(ZoneInfo("America/New_York")).year
+        decade = (now_year // 10) * 10
+        year = decade + int(match.group(2))
+        if year < now_year - 2:
+            year += 10
+        return datetime(year, month, calendar.monthrange(year, month)[1]).date()
+    try:
+        return datetime.fromisoformat(str(raw)[:10]).date()
+    except ValueError:
+        return None
+
+
+def select_liquid_contract(candidates: List[Dict], snapshots: List[Dict], today) -> Dict:
+    eligible = []
+    for item in candidates:
+        symbol = item.get("symbol") or item.get("ticker")
+        expiration = contract_expiration(item)
+        if symbol and expiration and expiration >= today:
+            eligible.append({"symbol": symbol, "expiration": expiration})
+    eligible.sort(key=lambda item: item["expiration"])
+    nearest = eligible[:2]
+    snapshot_map = {item.get("symbol"): item for item in snapshots if item.get("symbol")}
+    for item in nearest:
+        snapshot = snapshot_map.get(item["symbol"], {})
+        item["volume"] = float(snapshot.get("volume") or 0)
+        item["open_interest"] = float(snapshot.get("open_interest") or 0)
+    if not nearest:
+        raise RuntimeError("Webull returned no unexpired futures contracts")
+    return max(nearest, key=lambda item: (item["volume"], item["open_interest"], -item["expiration"].toordinal()))
+
+
+def webull_active_contract(name: str) -> str:
+    global CONTRACT_SELECTION
+    fallback_symbol = WEBULL_SYMBOLS[name]
+    try:
+        from webull.data.common.category import Category
+    except ImportError as exc:
+        raise RuntimeError("Install webull-openapi-python-sdk") from exc
+    response = webull_client().instrument.get_futures_instrument(
+        category=Category.US_FUTURES.name,
+        code=name,
+        status="LISTING",
+    )
+    if response.status_code != 200:
+        if fallback_symbol:
+            CONTRACT_SELECTION[name] = {"mode": "configured fallback", "symbol": fallback_symbol, "reason": f"contract directory HTTP {response.status_code}"}
+            return fallback_symbol
+        raise RuntimeError(f"Webull contract directory failed ({response.status_code})")
+    candidates = webull_result_items(response.json())
+    symbols = [item.get("symbol") or item.get("ticker") for item in candidates]
+    symbols = [symbol for symbol in symbols if symbol and symbol.startswith(name)][:4]
+    snapshot_rows = []
+    if symbols:
+        snapshot = webull_client().futures_market_data.get_futures_snapshot(
+            ",".join(symbols), Category.US_FUTURES.name
+        )
+        if snapshot.status_code == 200:
+            snapshot_rows = webull_result_items(snapshot.json())
+    try:
+        selected = select_liquid_contract(candidates, snapshot_rows, datetime.now(ZoneInfo("America/New_York")).date())
+    except RuntimeError:
+        if not fallback_symbol:
+            raise
+        CONTRACT_SELECTION[name] = {"mode": "configured fallback", "symbol": fallback_symbol, "reason": "no usable Webull contract metadata"}
+        return fallback_symbol
+    CONTRACT_SELECTION[name] = {
+        "mode": "automatic liquidity rollover",
+        "symbol": selected["symbol"],
+        "expiration": selected["expiration"].isoformat(),
+        "volume": selected["volume"],
+        "open_interest": selected["open_interest"],
+        "reason": "highest volume/open interest among the nearest two unexpired contracts",
+    }
+    return selected["symbol"]
+
+
 def aggregate_candles(rows: List[Dict], minutes: int = 20) -> List[Dict]:
     buckets = {}
     for row in rows:
@@ -236,7 +336,7 @@ def futures_history(name: str) -> tuple[List[Dict], List[Dict], List[Dict], str]
     global ACTIVE_FUTURES_SOURCE
     if FUTURES_PROVIDER == "webull":
         try:
-            symbol = WEBULL_SYMBOLS[name]
+            symbol = webull_active_contract(name)
             five_minute = webull_candles(symbol, "M5", 1200)
             daily = webull_candles(symbol, "D", 370)
             ACTIVE_FUTURES_SOURCE = "Webull OpenAPI real-time CME futures"
@@ -256,6 +356,7 @@ def futures_history(name: str) -> tuple[List[Dict], List[Dict], List[Dict], str]
                 raise
     symbol = YAHOO_FALLBACK_SYMBOLS[name]
     ACTIVE_FUTURES_SOURCE = "Yahoo Finance delayed backup"
+    CONTRACT_SELECTION[name] = {"mode": "Yahoo continuous fallback", "symbol": symbol, "reason": "Webull unavailable or not configured"}
     five_minute = candles(symbol, "5d", "5m")
     return candles(symbol, "1y", "1d"), aggregate_candles(five_minute, 20), five_minute, symbol
 
@@ -872,6 +973,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "automation": auto,
         "name": name,
         "symbol": symbol,
+        "contract_selection": CONTRACT_SELECTION.get(name, {"mode": "provider supplied", "symbol": symbol}),
         "last": round_price(current),
         "last_time": last_time.strftime("%Y-%m-%d %H:%M UTC"),
         "last_time_et": last_time.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
