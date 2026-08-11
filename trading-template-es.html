@@ -1896,7 +1896,7 @@
       setRadio("trend-pro", window.autoTrendPro);
       setReadout("trend-pro", window.autoTrendPro);
       setRadio("vwap", auto.vwap_position || "Mixed");
-      setReadout("vwap", `${fmt(auto.vwap)} · ${auto.vwap_position || "Mixed"} · distance ${fmt(auto.vwap_distance)}`);
+      setReadout("vwap", `Session ${fmt(auto.vwap)} · ${auto.vwap_position || "Mixed"} · ${fmt(auto.vwap_distance)} pts | 2-day AVWAP ${fmt(auto.anchored_vwap_2day)} · ${auto.anchored_vwap_2day_position || "Mixed"} · ${fmt(auto.anchored_vwap_2day_distance)} pts`);
       setRadio("today-bias", auto.todays_bias || "Neutral");
       setReadout("today-bias", auto.todays_bias || "Neutral");
       setRadio("direction", window.autoDirection);

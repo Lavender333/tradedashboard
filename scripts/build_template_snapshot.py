@@ -227,6 +227,24 @@ def vwap(rows: List[Dict]):
     return weighted / total_volume
 
 
+def two_session_anchored_vwap(rows: List[Dict]):
+    """Return VWAP spanning the latest two CME trading sessions.
+
+    CME equity-index sessions begin at 18:00 ET. Bars after 18:00 belong to
+    the following trade date, keeping the anchor aligned across midnight.
+    """
+    if not rows:
+        return None
+    labeled = []
+    for row in rows:
+        local = ny_time(row)
+        trade_date = local.date() + timedelta(days=1) if local.hour >= 18 else local.date()
+        labeled.append((trade_date, row))
+    sessions = sorted({trade_date for trade_date, _ in labeled})
+    selected = set(sessions[-2:])
+    return vwap([row for trade_date, row in labeled if trade_date in selected])
+
+
 def bollinger(rows: List[Dict], period: int = 20, deviations: float = 2.0) -> Dict:
     closes = [row["close"] for row in rows]
     if len(closes) < period:
@@ -671,6 +689,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     market_context = session_market_context(intraday)
     overnight = overnight_context(intraday, market_context)
     vwap_value = market_context["vwap"]
+    anchored_vwap = two_session_anchored_vwap(intraday)
     bands = bollinger(intraday)
     band_width = (bands["upper"] - bands["lower"]) if bands["upper"] is not None else None
     bb_position = ((current - bands["lower"]) / band_width) if band_width else None
@@ -740,6 +759,9 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "vwap": structure["vwap"],
         "vwap_position": structure["vwap_position"],
         "vwap_distance": round_price(current - vwap_value) if vwap_value is not None else None,
+        "anchored_vwap_2day": round_price(anchored_vwap),
+        "anchored_vwap_2day_position": "Above" if anchored_vwap is not None and current > anchored_vwap else "Below" if anchored_vwap is not None and current < anchored_vwap else "Mixed",
+        "anchored_vwap_2day_distance": round_price(current - anchored_vwap) if anchored_vwap is not None else None,
         "bb_position": None if bb_position is None else round(bb_position, 3),
         "chase_filter": chase_status,
         "data_quality_pass": data_quality_pass,

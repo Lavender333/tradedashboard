@@ -72,7 +72,7 @@ The free ES/ZB template uses delayed Yahoo Finance futures OHLCV. It builds 20-m
 - Weekly and monthly high/low
 - Previous day high/low
 - Opening range and overnight high/low
-- ATR(14) on 20-minute candles, Bollinger Bands (20,2), delayed VIX context, and Treasury-yield direction
+- Session VWAP and two-session anchored VWAP, ATR(14) on 20-minute candles, Bollinger Bands (20,2), delayed VIX context, and Treasury-yield direction
 - Economic calendar highlights from the live Nasdaq Economic Calendar feed, with `data/economic-calendar.json` as a fallback
 - Overnight / Europe context using overnight range, pre-open direction, inventory, and open confirmation signals
 - Instrument-specific ES/ZB master pattern analysis for market state, highest-probability setup, liquidity pattern, news behavior, time window, and intermarket read
