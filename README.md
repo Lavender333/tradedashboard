@@ -64,6 +64,8 @@ https://lavender333.github.io/tradedashboard/trading-template-zb.html
 
 The free ES/ZB template uses delayed Yahoo Finance futures OHLCV. It builds 20-minute candles and calculates all futures technicals locally from that single synchronized feed. Because free CME futures data is delayed, the dashboard labels it **Planning Only** and will not approve execution.
 
+The displayed current price always includes its provider symbol, Eastern timestamp, source, delay status, and age. Five-minute feed bars drive the displayed price and confirmation checks; 20-minute bars drive ATR and Bollinger calculations. RTH VWAP begins at 9:30 a.m. ET, the opening range completes at 10:00 a.m. ET, and overnight levels use only the current CME trade date.
+
 - Daily ES-vs-ZB six-point selection at the 8:10 ET (ZB) and 9:20 ET (ES) checkpoints, using HTF direction, true EMA 20/50 alignment, VWAP, key-level proximity, ATR-normalized target room, and one-to-two completed five-minute closes
 - A `TRADE`, `WATCH`, `WAIT`, or `SKIP BOTH` recommendation before the detailed 100-point worksheet and institutional gate
 - ES and ZB current price context

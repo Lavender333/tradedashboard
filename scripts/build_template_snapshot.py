@@ -165,7 +165,7 @@ def aggregate_candles(rows: List[Dict], minutes: int = 20) -> List[Dict]:
     return [buckets[key] for key in sorted(buckets)]
 
 
-def futures_history(name: str) -> tuple[List[Dict], List[Dict], str]:
+def futures_history(name: str) -> tuple[List[Dict], List[Dict], List[Dict], str]:
     global ACTIVE_FUTURES_SOURCE
     if FUTURES_PROVIDER == "databento":
         try:
@@ -173,13 +173,14 @@ def futures_history(name: str) -> tuple[List[Dict], List[Dict], str]:
             minute_rows = databento_candles(symbol, datetime.now(timezone.utc) - timedelta(days=10))
             daily = databento_candles(symbol, datetime.now(timezone.utc) - timedelta(days=370), "ohlcv-1d")
             ACTIVE_FUTURES_SOURCE = "Databento CME futures data"
-            return daily, aggregate_candles(minute_rows, 20), symbol
+            return daily, aggregate_candles(minute_rows, 20), aggregate_candles(minute_rows, 5), symbol
         except Exception:
             if os.environ.get("ALLOW_YAHOO_FALLBACK", "true").lower() != "true":
                 raise
     symbol = YAHOO_FALLBACK_SYMBOLS[name]
     ACTIVE_FUTURES_SOURCE = "Yahoo Finance delayed backup"
-    return candles(symbol, "1y", "1d"), aggregate_candles(candles(symbol, "5d", "5m"), 20), symbol
+    five_minute = candles(symbol, "5d", "5m")
+    return candles(symbol, "1y", "1d"), aggregate_candles(five_minute, 20), five_minute, symbol
 
 
 def sma(values: List[float], period: int):
@@ -324,7 +325,7 @@ def structure_score(last: float, previous_high: float, previous_low: float, on_h
     score = 4
     if previous_low <= last <= previous_high:
         score += 2
-    if on_low <= last <= on_high:
+    if on_low is not None and on_high is not None and on_low <= last <= on_high:
         score += 2
     if vwap_value is not None:
         score += 1
@@ -383,15 +384,26 @@ def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: fl
             ("Opening Range High", market_context["opening_range_high"], "wait for confirmed break/retest"),
             ("Opening Range Low", market_context["opening_range_low"], "wait for confirmed break/retest"),
         ]
-    return [{"rank": index + 1, "setup": setup, "watch_level": round_price(level), "trigger": trigger, "status": "WAITING FOR CONFIRMATION"} for index, (setup, level, trigger) in enumerate(candidates)]
+    usable = [(setup, level, trigger) for setup, level, trigger in candidates if level is not None]
+    return [{"rank": index + 1, "setup": setup, "watch_level": round_price(level), "trigger": trigger, "status": "WAITING FOR CONFIRMATION"} for index, (setup, level, trigger) in enumerate(usable)]
 
 
 def ny_time(row: Dict):
     return row["time"].astimezone(ZoneInfo("America/New_York"))
 
 
+def trade_date_for_row(row: Dict):
+    local = ny_time(row)
+    return local.date() + timedelta(days=1) if local.hour >= 18 else local.date()
+
+
+def trade_date_for_datetime(value: datetime):
+    local = value.astimezone(ZoneInfo("America/New_York"))
+    return local.date() + timedelta(days=1) if local.hour >= 18 else local.date()
+
+
 def latest_session_date(rows: List[Dict]):
-    return ny_time(rows[-1]).date()
+    return trade_date_for_row(rows[-1])
 
 
 def session_rows(rows: List[Dict], session_date) -> Dict[str, List[Dict]]:
@@ -401,35 +413,33 @@ def session_rows(rows: List[Dict], session_date) -> Dict[str, List[Dict]]:
     for row in rows:
         local = ny_time(row)
         minutes = local.hour * 60 + local.minute
-        if local.date() == session_date and minutes < 9 * 60 + 30:
+        if trade_date_for_row(row) != session_date:
+            continue
+        if minutes >= 18 * 60 or minutes < 9 * 60 + 30:
             overnight.append(row)
-            if minutes >= 3 * 60:
+            if 3 * 60 <= minutes < 9 * 60 + 30:
                 europe.append(row)
-        elif local.date() == session_date and minutes >= 9 * 60 + 30:
+        elif 9 * 60 + 30 <= minutes < 16 * 60:
             regular.append(row)
-        elif local.date() < session_date and minutes >= 18 * 60:
-            overnight.append(row)
     return {"overnight": overnight, "europe": europe, "regular": regular}
 
 
 def session_market_context(rows: List[Dict]) -> Dict:
     session_date = latest_session_date(rows)
     buckets = session_rows(rows, session_date)
-    overnight = buckets["overnight"] or rows[:-26] or rows
+    overnight = buckets["overnight"]
     regular = buckets["regular"]
-    opening_source = regular if regular else rows[-min(len(rows), 26):]
-    opening_range = opening_source[:2] if len(opening_source) >= 2 else opening_source
-    vwap_source = regular if regular else rows[-min(len(rows), 26):]
+    opening_range = regular[:6] if len(regular) >= 6 else []
     return {
         "session_date": session_date,
         "overnight": overnight,
         "europe": buckets["europe"],
         "regular": regular,
-        "opening_range_high": max(row["high"] for row in opening_range),
-        "opening_range_low": min(row["low"] for row in opening_range),
-        "overnight_high": max(row["high"] for row in overnight),
-        "overnight_low": min(row["low"] for row in overnight),
-        "vwap": vwap(vwap_source),
+        "opening_range_high": max((row["high"] for row in opening_range), default=None),
+        "opening_range_low": min((row["low"] for row in opening_range), default=None),
+        "overnight_high": max((row["high"] for row in overnight), default=None),
+        "overnight_low": min((row["low"] for row in overnight), default=None),
+        "vwap": vwap(regular),
     }
 
 
@@ -438,6 +448,20 @@ def overnight_context(rows: List[Dict], market_context: Dict) -> Dict:
     overnight = market_context["overnight"]
     europe = market_context["europe"]
     regular = market_context["regular"]
+    if not overnight:
+        return {
+            "date": session_date.isoformat(),
+            "overnight_direction": "Not available",
+            "overnight_high": None,
+            "overnight_low": None,
+            "overnight_last": None,
+            "position": "Not available",
+            "europe_direction": "Not available",
+            "inventory": "Not available",
+            "open_confirmation": "Waiting for valid session data",
+            "bias": "No Trade",
+            "summary": "Overnight session data is unavailable.",
+        }
     current = rows[-1]["close"]
     on_high = max(row["high"] for row in overnight)
     on_low = min(row["low"] for row in overnight)
@@ -539,8 +563,8 @@ def market_selector(
     data_fresh: bool,
 ) -> Dict:
     """Score the six objective checks used to choose between ES and ZB."""
-    decision_minutes = 8 * 60 + 10 if name == "ZB" else 9 * 60 + 20
-    decision_time = "08:10 ET" if name == "ZB" else "09:20 ET"
+    decision_minutes = 8 * 60 + 30 if name == "ZB" else 10 * 60
+    decision_time = "08:30 ET" if name == "ZB" else "10:00 ET"
     now_et = generated_at.astimezone(ZoneInfo("America/New_York"))
     ready = now_et.hour * 60 + now_et.minute >= decision_minutes
     direction = "LONG" if htf_result == "Bullish" else "SHORT" if htf_result == "Bearish" else "NONE"
@@ -668,10 +692,9 @@ def choose_market(instruments: Dict[str, Dict]) -> Dict:
 
 
 def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix=None) -> Dict:
-    daily, intraday, symbol = futures_history(name)
-    five_minute = intraday
+    daily, intraday, five_minute, symbol = futures_history(name)
     closes = [row["close"] for row in daily]
-    current = intraday[-1]["close"]
+    current = five_minute[-1]["close"]
     averages = {f"ma{period}": sma(closes, period) for period in [20, 50, 72, 100, 200]}
     exponential_averages = {f"ema{period}": ema(closes, period) for period in [20, 50]}
     trend = trend_score(current, averages)
@@ -683,13 +706,14 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     htf_result = combined_htf_result(trend["result"], weekly_trend["result"], monthly_trend["result"])
     intraday_atr = atr(intraday)
     daily_atr = atr(daily)
-    last_time = intraday[-1]["time"]
+    last_time = five_minute[-1]["time"]
     age_minutes = max(0, int((generated_at - last_time).total_seconds() // 60))
-    data_status = "fresh" if age_minutes <= 90 else "stale"
-    market_context = session_market_context(intraday)
-    overnight = overnight_context(intraday, market_context)
+    source_live = ACTIVE_FUTURES_SOURCE.startswith("Databento")
+    data_status = "live" if source_live and age_minutes <= 7 else "delayed" if age_minutes <= 30 else "stale"
+    market_context = session_market_context(five_minute)
+    overnight = overnight_context(five_minute, market_context)
     vwap_value = market_context["vwap"]
-    anchored_vwap = two_session_anchored_vwap(intraday) if name == "ES" else None
+    anchored_vwap = two_session_anchored_vwap(five_minute) if name == "ES" else None
     bands = bollinger(intraday)
     band_width = (bands["upper"] - bands["lower"]) if bands["upper"] is not None else None
     bb_position = ((current - bands["lower"]) / band_width) if band_width else None
@@ -714,10 +738,9 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "fib_50": (prev_day["high"] + prev_day["low"]) / 2,
         "pivot": (prev_day["high"] + prev_day["low"] + prev_day["close"]) / 3,
     }
-    correct_date = ny_time(intraday[-1]).date() == datetime.now(ZoneInfo("America/New_York")).date()
+    correct_date = trade_date_for_row(five_minute[-1]) == trade_date_for_datetime(generated_at)
     indicators_ready = vwap_value is not None and intraday_atr is not None and bands["middle"] is not None
-    source_live = ACTIVE_FUTURES_SOURCE.startswith("Databento")
-    data_quality_pass = source_live and age_minutes <= 2 and correct_date and indicators_ready
+    data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready
     decision = trade_decision(rate_result, htf_result, False)
     watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
     selector = market_selector(
@@ -774,6 +797,10 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "symbol": symbol,
         "last": round_price(current),
         "last_time": last_time.strftime("%Y-%m-%d %H:%M UTC"),
+        "last_time_et": last_time.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
+        "price_source": ACTIVE_FUTURES_SOURCE,
+        "price_basis": "Latest value in the 5-minute feed bar; the newest bar may still be forming",
+        "trade_date": trade_date_for_row(five_minute[-1]).isoformat(),
         "last_candle_age_minutes": age_minutes,
         "data_status": data_status,
         "moving_averages": {key: round_price(value) for key, value in averages.items()},

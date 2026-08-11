@@ -1868,9 +1868,9 @@
       document.getElementById("auto-status").textContent = statusText;
       document.getElementById("auto-generated").textContent = generatedLabel(snapshot);
       document.getElementById("auto-es").textContent =
-        `ES ${fmt(snapshot.instruments.ES.last)} · ${snapshot.instruments.ES.symbol} · ${snapshot.instruments.ES.last_time}`;
+        `ES ${fmt(snapshot.instruments.ES.last)} · ${snapshot.instruments.ES.symbol} · ${snapshot.instruments.ES.last_time_et || snapshot.instruments.ES.last_time}`;
       document.getElementById("auto-es-note").textContent =
-        `20/50/72/100/200 trend score ${snapshot.instruments.ES.trend.score}/10`;
+        `${snapshot.instruments.ES.price_source} · ${snapshot.instruments.ES.data_status} · age ${snapshot.instruments.ES.last_candle_age_minutes}m`;
       document.getElementById("auto-zb").textContent =
         `ZB ${fmt(snapshot.instruments.ZB.last)} · ${snapshot.instruments.ZB.trend.result}`;
       document.getElementById("auto-zb-note").textContent =
@@ -1913,7 +1913,7 @@
       setAutoValue("monthly-trend-score", context.monthly_trend.score);
       setAutoValue("monthly-high", fmt(context.monthly_high));
       setAutoValue("monthly-low", fmt(context.monthly_low));
-      setAutoValue("current-price", fmt(context.last));
+      setAutoValue("current-price", `${fmt(context.last)} · ${context.symbol} · ${context.last_time_et || context.last_time} · ${context.price_source || snapshot.provider}`);
       setAutoValue("trend-pro-daily-bullish-level", fmt(auto.trend_pro_daily_bullish_level));
       setAutoValue("trend-pro-daily-bearish-level", fmt(auto.trend_pro_daily_bearish_level));
       setAutoValue("trend-pro-240-bullish-level", fmt(auto.trend_pro_240_bullish_level));
