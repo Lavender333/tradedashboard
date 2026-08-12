@@ -46,6 +46,18 @@
       "profit_factor": 1.35
     }
   },
+  "overnight_only_candidate": {
+    "status": "superseded by independent locked rerun",
+    "derivation": "Post-test research candidate combining only the reported Overnight High and Overnight Low setup aggregates; not a new independent backtest",
+    "trades": 9,
+    "wins": 5,
+    "losses": 4,
+    "net_r": 4.311,
+    "profit_factor": 2.872,
+    "validation_pass": false,
+    "reason": "Only 9 qualifying trades; at least 30 locked out-of-sample trades are required before validation",
+    "independent_result": "backtest-es-overnight-only-quantconnect-452.json"
+  },
   "rejected_counts": {
     "HTF_DIRECTION_NOT_READY": 1037,
     "NO_LEVEL_CONFIRMATION": 15197,

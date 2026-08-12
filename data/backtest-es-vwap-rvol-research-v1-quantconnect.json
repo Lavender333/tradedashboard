@@ -1,0 +1,66 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "algorithm_id": "fdefdf3dbe051c0e910ad28f825da5e9",
+  "engine": "ES VWAP-RVOL RECLAIM RESEARCH V1 LOCKED",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "rules": {
+    "entry_window": "10:00 AM-1:59 PM ET",
+    "direction": "long only",
+    "rvol": "current five-minute volume / prior 20 sessions at the same time >= 2.0",
+    "reclaim": "prior close below prior VWAP; current low below VWAP; current close at least two ticks above VWAP",
+    "risk": "one tick below reclaim low and 0.45-1.0 five-minute ATR(14)",
+    "target": "session volume-weighted +1 standard-deviation band fixed at entry",
+    "minimum_reward": "1.5R room at entry",
+    "same_bar_policy": "stop first",
+    "costs": "$5 round turn + 1 ES tick entry + 1 ES tick exit",
+    "news_lockout": "not applied because no point-in-time Tier-1 release calendar was supplied"
+  },
+  "development_2020_2023": {
+    "trades": 8,
+    "wins": 2,
+    "losses": 6,
+    "win_rate": 25.0,
+    "net_r": -3.045,
+    "expectancy_r": -0.381,
+    "profit_factor": 0.549,
+    "max_drawdown_r": 3.045
+  },
+  "validation_2024_2026": {
+    "trades": 10,
+    "wins": 3,
+    "losses": 7,
+    "win_rate": 30.0,
+    "net_r": -2.312,
+    "expectancy_r": -0.231,
+    "profit_factor": 0.698,
+    "max_drawdown_r": 4.451
+  },
+  "combined": {
+    "trades": 18,
+    "wins": 5,
+    "losses": 13,
+    "win_rate": 27.78,
+    "net_r": -5.357,
+    "expectancy_r": -0.298,
+    "profit_factor": 0.628,
+    "max_drawdown_r": 7.154
+  },
+  "validation_pass": false,
+  "rejected_counts": {
+    "RVOL_HISTORY_NOT_READY": 960,
+    "NO_CROSS_FROM_BELOW": 43646,
+    "NO_TWO_TICK_VWAP_RECLAIM": 31657,
+    "RVOL_BELOW_2": 2548,
+    "RISK_ABOVE_1.0_ATR": 112,
+    "UPPER_BAND_ROOM_BELOW_1.5R": 11,
+    "RISK_BELOW_0.45_ATR": 3
+  },
+  "limitations": [
+    "The proposal requested a dynamically re-evaluated target, but doing so would allow the target to move away from price. This test fixes the actual +1 standard-deviation band at entry to keep risk and reward defined.",
+    "The proposal's sample code used daily ATR despite describing five-minute ATR. This test uses five-minute ATR(14), consistent with the written rule.",
+    "QuantConnect free Object Store writes were denied, so aggregate metrics were retained through debug output instead of a downloadable trade log."
+  ],
+  "conclusion": "REJECT V1: the locked VWAP-RVOL reclaim was negative in both development and untouched validation periods. Do not optimize thresholds from this small losing sample and do not integrate it into the live dashboard."
+}

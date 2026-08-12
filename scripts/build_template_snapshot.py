@@ -64,6 +64,12 @@ ACTIVE_FUTURES_SOURCE = ""
 WEBULL_DATA_CLIENT = None
 CONTRACT_SELECTION = {}
 
+ES_RESEARCH_ENGINE = "ES OVERNIGHT-ONLY RESEARCH V1"
+ES_APPROVED_SETUPS = frozenset({
+    "Overnight High Breakout Retest",
+    "Overnight Low Breakdown Retest",
+})
+
 OFFICIAL_EVENT_SOURCES = [
     (re.compile(r"\b(jolts|job openings|payroll|nonfarm|nfp|unemployment|cpi|ppi|claims)\b", re.I), "BLS", "https://www.bls.gov/"),
     (re.compile(r"\b(pce|personal income|personal spending|gdp|trade balance)\b", re.I), "BEA", "https://www.bea.gov/"),
@@ -545,8 +551,21 @@ def trade_decision(rate_result: str, htf_result: str, data_quality_pass: bool = 
     return {"todays_bias": "Neutral", "direction": "No Trade", "trade_plan_score": 0}
 
 
-def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: float, previous_low: float) -> List[Dict]:
-    if htf_result == "Bullish":
+def ranked_watch_levels(name: str, htf_result: str, market_context: Dict, previous_high: float, previous_low: float) -> List[Dict]:
+    if name == "ES" and htf_result == "Bullish":
+        candidates = [
+            ("Overnight High Breakout Retest", market_context["overnight_high"], "5m acceptance above, later retest, then reclaim"),
+        ]
+    elif name == "ES" and htf_result == "Bearish":
+        candidates = [
+            ("Overnight Low Breakdown Retest", market_context["overnight_low"], "5m acceptance below, later retest, then rejection"),
+        ]
+    elif name == "ES":
+        candidates = [
+            ("Overnight High", market_context["overnight_high"], "wait for bullish HTF direction and confirmed break/retest"),
+            ("Overnight Low", market_context["overnight_low"], "wait for bearish HTF direction and confirmed break/retest"),
+        ]
+    elif htf_result == "Bullish":
         candidates = [
             ("Opening Range Breakout Retest", market_context["opening_range_high"], "5m close above, retest, then reclaim"),
             ("Overnight High Breakout Retest", market_context["overnight_high"], "5m acceptance above, retest, then reclaim"),
@@ -570,7 +589,7 @@ def ranked_watch_levels(htf_result: str, market_context: Dict, previous_high: fl
 def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], rows: List[Dict], atr_value, bb_position, generated_at: datetime, data_quality_pass: bool) -> Dict:
     pending = {
         "confirmed": False,
-        "engine_version": "ES PRO V1" if name == "ES" else "ZB V2",
+        "engine_version": ES_RESEARCH_ENGINE if name == "ES" else "ZB V2",
         "direction": "No Trade",
         "status": "WAITING FOR BREAKOUT / RETEST / 5m CONFIRMATION",
         "entry": None,
@@ -588,6 +607,12 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
     if htf_result not in {"Bullish", "Bearish"} or not watch_levels or not atr_value:
         pending["status"] = "NO TRADE — DIRECTION OR INDICATORS NOT READY"
         return pending
+
+    if name == "ES":
+        watch_levels = [watch for watch in watch_levels if watch.get("setup") in ES_APPROVED_SETUPS]
+        if not watch_levels:
+            pending["status"] = "ES OVERNIGHT-ONLY SKIP — SETUP NOT APPROVED"
+            return pending
 
     completed = [row for row in rows if row["time"] + timedelta(minutes=5) <= generated_at][-24:]
     if len(completed) < 3:
@@ -682,7 +707,7 @@ def confirmed_trade_setup(name: str, htf_result: str, watch_levels: List[Dict], 
                 "risk_points": round_price(risk),
                 "atr_risk_ratio": round(atr_ratio, 3),
                 "transaction_cost_r": round(0.60 / risk, 3) if name == "ES" else None,
-                "engine_version": "ES PRO V1" if name == "ES" else "ZB V2",
+                "engine_version": ES_RESEARCH_ENGINE if name == "ES" else "ZB V2",
                 "rr1": 1.0,
                 "rr2": 2.0,
                 "confirmation_time": confirmation_bar["time"].astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %-I:%M %p ET"),
@@ -1074,7 +1099,7 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
     now_minutes = now_et.hour * 60 + now_et.minute
     market_hours_pass = now_et.weekday() < 5 and 9 * 60 + 30 <= now_minutes < 16 * 60
     data_quality_pass = source_live and age_minutes <= 7 and correct_date and indicators_ready and market_hours_pass
-    watch_levels = ranked_watch_levels(htf_result, market_context, prev_day["high"], prev_day["low"])
+    watch_levels = ranked_watch_levels(name, htf_result, market_context, prev_day["high"], prev_day["low"])
     trade_setup = confirmed_trade_setup(
         name, htf_result, watch_levels, five_minute, intraday_atr, bb_position, generated_at, data_quality_pass
     )
@@ -1144,8 +1169,8 @@ def instrument_snapshot(name: str, rate_result: str, generated_at: datetime, vix
         "pattern_confirmed": trade_setup["confirmed"],
         "setup_confirmed": False if professional_es else trade_setup["confirmed"],
         "execution_eligible": False if professional_es else trade_setup["confirmed"],
-        "strategy_mode": "CORE RESEARCH" if professional_es else "ZB V2",
-        "validation_reason": "Actual Trend Pro and verified order flow are unavailable; full 100-point gate cannot pass." if professional_es else "",
+        "strategy_mode": "OVERNIGHT-ONLY RESEARCH" if professional_es else "ZB V2",
+        "validation_reason": "Research only: the recent combined overnight baseline produced PF 1.873 from only 11 trades, while the maximum-history Overnight High long test produced PF 0.536 from 151 trades and was rejected. No ES strategy is validated; display research levels only and never label them executable." if professional_es else "",
         "setup_status": pattern_status if professional_es else trade_setup["status"],
         "watch_levels": watch_levels,
         "liquidity_shift": "N/A — order-flow feed not connected",

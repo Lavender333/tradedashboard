@@ -49,7 +49,7 @@
         "data_quality_reason": "DELAYED DATA \u2014 Planning Only",
         "delta_result": "Mixed",
         "direction": "No Trade",
-        "engine_version": "ES PRO V1",
+        "engine_version": "ES OVERNIGHT-ONLY RESEARCH V1",
         "entry": null,
         "entry_type": "Watch Zone \u2192 Trigger \u2192 Actual Entry",
         "execution_eligible": false,
@@ -89,7 +89,7 @@
         "setup_confirmed": false,
         "setup_status": "NO TRADE \u2014 LIVE DATA QUALITY GATE FAILED",
         "stop": null,
-        "strategy_mode": "CORE RESEARCH",
+        "strategy_mode": "OVERNIGHT-ONLY RESEARCH",
         "structure_score": 0,
         "target1": null,
         "target2": null,
@@ -102,7 +102,7 @@
         "trend_pro_result": "Unavailable",
         "trend_pro_score": 0,
         "trend_pro_source": "unavailable",
-        "validation_reason": "Actual Trend Pro and verified order flow are unavailable; full 100-point gate cannot pass.",
+        "validation_reason": "Research only: the recent combined overnight baseline produced PF 1.873 from only 11 trades, while the maximum-history Overnight High long test produced PF 0.536 from 151 trades and was rejected. No ES strategy is validated; display research levels only and never label them executable.",
         "volatility_score": 5,
         "vwap": null,
         "vwap_distance": null,
@@ -112,15 +112,8 @@
             "rank": 1,
             "setup": "Overnight High Breakout Retest",
             "status": "WAITING FOR CONFIRMATION",
-            "trigger": "5m acceptance above, retest, then reclaim",
+            "trigger": "5m acceptance above, later retest, then reclaim",
             "watch_level": 7796.0
-          },
-          {
-            "rank": 2,
-            "setup": "Previous Day Low Rejection",
-            "status": "WAITING FOR CONFIRMATION",
-            "trigger": "sweep and completed 5m reclaim",
-            "watch_level": 7763.0
           }
         ]
       },
