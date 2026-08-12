@@ -1,0 +1,42 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "backtest": "Upgraded Fluorescent Orange Chicken",
+  "algorithm_id": "2674e90ab3d40ab406159398e201bd1d",
+  "engine": "ES OVERNIGHT HIGH LONG-ONLY — MAXIMUM HISTORY / 300-TRADE TARGET",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "evaluation_start": "2010-05-03",
+  "requested_evaluation_end": "2026-08-10",
+  "last_available_data_date": "2026-05-14",
+  "completed_rth_sessions": 4135,
+  "target_trades": 300,
+  "trades": 151,
+  "wins": 50,
+  "losses": 101,
+  "win_rate": 33.11,
+  "net_r": -49.466,
+  "expectancy_r": -0.328,
+  "profit_factor": 0.536,
+  "max_drawdown_r": 52.848,
+  "costs": "$5 round turn + 1 ES tick entry + 1 ES tick exit",
+  "validation_pass": false,
+  "extend_history": true,
+  "exit_counts": {
+    "STOP": 73,
+    "TARGET_2": 45,
+    "STOP_AFTER_T1": 28,
+    "SESSION_CLOSE": 5
+  },
+  "rejected_counts": {
+    "NO_LEVEL_CONFIRMATION": 118013,
+    "CONFIRMATION_BODY_ABOVE_0.35_ATR": 6505,
+    "LONG_BB_OUTSIDE_0.60_0.75": 11794,
+    "NO_PRIOR_ACCEPTED_BREAK_RETEST": 705,
+    "HTF_NOT_BULLISH": 56964,
+    "STRUCTURAL_RISK_BELOW_0.45_ATR": 103,
+    "STRUCTURAL_RISK_ABOVE_1.0_ATR": 60
+  },
+  "trade_log_status": "QuantConnect completed the simulation, but the free organization denied Object Store writes. Aggregate metrics, rejection counts, and exit counts were retained through short debug metrics; the per-trade JSON export was unavailable.",
+  "conclusion": "REJECT LONG-ONLY HYPOTHESIS: the apparent strength in the recent five-trade sample did not persist. Across the maximum available 4,135-session history, the locked Overnight High long setup produced a 0.536 profit factor, negative expectancy, and a 52.848R maximum drawdown. QuantConnect supplied 151 qualifying trades, not the requested 300; reaching 300 would require unavailable earlier ES data or a second independent dataset."
+}

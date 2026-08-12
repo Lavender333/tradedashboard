@@ -57,6 +57,48 @@ class EsProfessionalRulesTest(unittest.TestCase):
         self.assertFalse(result["confirmed"])
         self.assertIn("10:00 AM", result["status"])
 
+    def test_rejects_opening_range_setup_even_when_price_sequence_confirms(self):
+        opening_range_watch = [{
+            "rank": 1,
+            "setup": "Opening Range Breakout Retest",
+            "watch_level": 100,
+            "trigger": "test",
+        }]
+        rows = [
+            bar(9, 50, 99.5, 100, 99, 99.75),
+            bar(9, 55, 100.5, 101, 100.5, 100.75),
+            bar(10, 0, 100.7, 101, 99, 100.5),
+            bar(10, 5, 103, 106.2, 102, 106),
+        ]
+        result = engine.confirmed_trade_setup(
+            "ES", "Bullish", opening_range_watch, rows, 10, 0.65,
+            datetime(2026, 5, 14, 10, 10, tzinfo=ET), True,
+        )
+        self.assertFalse(result["confirmed"])
+        self.assertIn("SETUP NOT APPROVED", result["status"])
+
+    def test_es_watchlist_contains_only_directional_overnight_setup(self):
+        context = {
+            "opening_range_high": 105,
+            "opening_range_low": 95,
+            "overnight_high": 103,
+            "overnight_low": 97,
+        }
+        bullish = engine.ranked_watch_levels("ES", "Bullish", context, 106, 94)
+        bearish = engine.ranked_watch_levels("ES", "Bearish", context, 106, 94)
+        self.assertEqual([item["setup"] for item in bullish], ["Overnight High Breakout Retest"])
+        self.assertEqual([item["setup"] for item in bearish], ["Overnight Low Breakdown Retest"])
+
+    def test_zb_watchlist_keeps_opening_range_setup(self):
+        context = {
+            "opening_range_high": 105,
+            "opening_range_low": 95,
+            "overnight_high": 103,
+            "overnight_low": 97,
+        }
+        bullish = engine.ranked_watch_levels("ZB", "Bullish", context, 106, 94)
+        self.assertEqual(bullish[0]["setup"], "Opening Range Breakout Retest")
+
     def test_trend_score_is_symmetric(self):
         bounds = {"high": 105, "low": 95}
         long_averages = {f"ma{period}": value for period, value in zip(

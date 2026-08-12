@@ -1,0 +1,50 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "backtest": "Calm Blue Shark",
+  "algorithm_id": "a341d841fe896d41d5c4e13f6712d8a1",
+  "engine": "ES OVERNIGHT-ONLY RESEARCH V1 LOCKED",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "evaluation_start": "2024-08-13",
+  "requested_evaluation_end": "2026-08-10",
+  "last_available_data_date": "2026-05-14",
+  "completed_rth_sessions": 452,
+  "trades": 11,
+  "wins": 5,
+  "losses": 6,
+  "win_rate": 45.45,
+  "net_r": 3.082,
+  "expectancy_r": 0.28,
+  "profit_factor": 1.873,
+  "max_drawdown_r": 2.097,
+  "costs": "$5 round turn + 1 ES tick entry + 1 ES tick exit",
+  "validation_pass": false,
+  "extend_history": true,
+  "setup_results": {
+    "Overnight High Breakout Retest": {
+      "trades": 5,
+      "wins": 3,
+      "net_r": 3.383,
+      "profit_factor": 10.648
+    },
+    "Overnight Low Breakdown Retest": {
+      "trades": 6,
+      "wins": 2,
+      "net_r": -0.301,
+      "profit_factor": 0.905
+    }
+  },
+  "rejected_counts": {
+    "HTF_DIRECTION_NOT_READY": 1040,
+    "NO_LEVEL_CONFIRMATION": 16955,
+    "CONFIRMATION_BODY_ABOVE_0.35_ATR": 1182,
+    "LONG_BB_OUTSIDE_0.60_0.75": 1642,
+    "NO_PRIOR_ACCEPTED_BREAK_RETEST": 206,
+    "STRUCTURAL_RISK_BELOW_0.45_ATR": 12,
+    "SHORT_BB_CHASE_BELOW_0.15": 346,
+    "STRUCTURAL_RISK_ABOVE_1.0_ATR": 14
+  },
+  "trade_log_status": "QuantConnect completed the simulation, but the free organization denied Object Store writes. Aggregate metrics, setup totals, and rejection counts were retained through short debug metrics; the per-trade JSON export was unavailable.",
+  "conclusion": "PROMISING BUT UNVALIDATED: profit factor and expectancy are positive, but profit factor is below 3.0 and only 11 trades qualified. Keep research-only and extend the exact locked test until at least 30 trades exist."
+}

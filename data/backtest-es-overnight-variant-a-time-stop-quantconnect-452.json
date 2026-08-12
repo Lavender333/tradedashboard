@@ -1,0 +1,67 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "backtest": "Ugly Orange Fly",
+  "algorithm_id": "742fff6de60209f51b186162415af5e4",
+  "engine": "ES OVERNIGHT-ONLY RESEARCH V1 — VARIANT A 30-MIN TIME STOP",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "evaluation_start": "2024-08-13",
+  "requested_evaluation_end": "2026-08-10",
+  "last_available_data_date": "2026-05-14",
+  "completed_rth_sessions": 452,
+  "change_from_baseline": "Exit at the close of the sixth completed 5-minute bar after entry when T1 has not been reached. Intrabar stop and target checks retain priority.",
+  "trades": 11,
+  "wins": 5,
+  "losses": 6,
+  "win_rate": 45.45,
+  "net_r": 1.061,
+  "expectancy_r": 0.096,
+  "profit_factor": 1.263,
+  "max_drawdown_r": 2.097,
+  "costs": "$5 round turn + 1 ES tick entry + 1 ES tick exit",
+  "validation_pass": false,
+  "extend_history": true,
+  "setup_results": {
+    "Overnight High Breakout Retest": {
+      "trades": 5,
+      "wins": 3,
+      "net_r": 2.54,
+      "profit_factor": 8.245
+    },
+    "Overnight Low Breakdown Retest": {
+      "trades": 6,
+      "wins": 2,
+      "net_r": -1.479,
+      "profit_factor": 0.598
+    }
+  },
+  "exit_counts": {
+    "STOP": 3,
+    "TIME_STOP_30_MIN": 4,
+    "STOP_AFTER_T1": 2,
+    "TARGET_2": 2
+  },
+  "rejected_counts": {
+    "HTF_DIRECTION_NOT_READY": 1040,
+    "NO_LEVEL_CONFIRMATION": 16955,
+    "CONFIRMATION_BODY_ABOVE_0.35_ATR": 1182,
+    "LONG_BB_OUTSIDE_0.60_0.75": 1642,
+    "NO_PRIOR_ACCEPTED_BREAK_RETEST": 206,
+    "STRUCTURAL_RISK_BELOW_0.45_ATR": 12,
+    "SHORT_BB_CHASE_BELOW_0.15": 346,
+    "STRUCTURAL_RISK_ABOVE_1.0_ATR": 14
+  },
+  "baseline_comparison": {
+    "baseline_profit_factor": 1.873,
+    "profit_factor_change": -0.61,
+    "baseline_net_r": 3.082,
+    "net_r_change": -2.021,
+    "baseline_expectancy_r": 0.28,
+    "expectancy_r_change": -0.184,
+    "baseline_max_drawdown_r": 2.097,
+    "max_drawdown_r_change": 0.0
+  },
+  "trade_log_status": "QuantConnect completed the simulation, but the free organization denied Object Store writes. Aggregate metrics, setup totals, rejection counts, and exit counts were retained through short debug metrics; the per-trade JSON export was unavailable.",
+  "conclusion": "REJECT VARIANT A: the 30-minute time stop reduced profit factor, net R, expectancy, and both setup results without reducing maximum drawdown. Do not add this exit to the dashboard strategy."
+}

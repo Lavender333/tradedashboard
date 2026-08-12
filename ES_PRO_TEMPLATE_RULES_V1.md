@@ -85,7 +85,7 @@ Determine a proposed direction before scoring. Every directional score is symmet
 - A later bar retests the level without invalidation = 2.
 - The newest completed five-minute candle confirms away from the level = 1.
 
-Approved reference levels: overnight high/low, completed opening-range high/low, previous-day high/low, and previous-week high/low. A setup must identify exactly one primary level.
+The full professional worksheet may score overnight high/low, completed opening-range high/low, previous-day high/low, and previous-week high/low as context. The deployed ES Overnight-Only Research V1 execution candidate has a stricter setup whitelist: only an Overnight High breakout/retest long or Overnight Low breakdown/retest short can form a research entry. Opening Range, previous-day, and previous-week levels cannot trigger an ES research entry. A setup must identify exactly one primary level.
 
 ### 5. Order flow — 10 points
 

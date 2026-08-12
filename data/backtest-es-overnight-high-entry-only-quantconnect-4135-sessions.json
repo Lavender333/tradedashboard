@@ -1,0 +1,44 @@
+{
+  "source": "QuantConnect",
+  "project": "Sleepy Yellow-Green Beaver",
+  "backtest_algorithm_id": "3c472fcb393e0cb80966e753d486e775",
+  "engine": "ES OVERNIGHT HIGH LONG — SIX-BAR ENTRY-ONLY PROOF",
+  "data": "QuantConnect continuous ES minute data consolidated to 5-minute bars",
+  "mapping": "OpenInterest / BackwardsRatio / depth 0",
+  "evaluation_start": "2010-05-03",
+  "requested_evaluation_end": "2026-08-10",
+  "last_available_data_date": "2026-05-14",
+  "completed_rth_sessions": 4135,
+  "test_definition": {
+    "horizon": "six completed 5-minute bars after the signal",
+    "win": "+1.0 signal ATR reached before -0.5 signal ATR",
+    "loss": "-0.5 signal ATR reached first",
+    "same_bar_policy": "conservative loss",
+    "neither_policy": "reported separately and not counted as a win",
+    "money_management": "none",
+    "costs": "not applicable to the signal-only excursion test"
+  },
+  "signals": 151,
+  "favorable_1_atr_first": 18,
+  "raw_entry_win_rate": 11.92,
+  "average_mfe_atr": 0.578,
+  "average_mae_atr": 0.637,
+  "edge_ratio": 0.907,
+  "entry_edge_pass": false,
+  "outcomes": {
+    "ADVERSE_0.5_ATR_FIRST": 68,
+    "NEITHER_WITHIN_6_BARS": 65,
+    "FAVORABLE_1.0_ATR_FIRST": 18
+  },
+  "thresholds_from_proposal": {
+    "minimum_signals": 100,
+    "minimum_raw_entry_win_rate": 60.0,
+    "minimum_edge_ratio": 1.8
+  },
+  "limitations": [
+    "The source contains five-minute OHLCV and does not establish bid/ask cumulative delta, volume-at-price HVN/LVN, iceberg activity, or Level 3 queue position.",
+    "MFE and MAE are bar-based; when both thresholds occur in the same five-minute bar, their intrabar order is unknowable and is scored conservatively as a loss.",
+    "QuantConnect free Object Store writes were unavailable, so aggregate diagnostics were retained through debug metrics rather than a downloadable per-signal log."
+  ],
+  "conclusion": "FAIL: the locked Overnight High long signal does not possess the proposed six-bar entry edge. Its 11.92% raw win rate and 0.907 MFE/MAE ratio are far below the proposed 60% and 1.8 thresholds. Do not attempt to repair this entry with money management, and do not add untested order-flow filters to the live dashboard."
+}
