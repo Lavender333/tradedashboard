@@ -108,6 +108,22 @@
       gap: 10px;
       margin-bottom: 16px;
     }
+    .market-lenses {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .market-lens {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .market-lens.is-primary { border-color: var(--accent); }
+    .market-lens h2 { font-size: 0.92rem; margin: 0 0 7px; }
+    .market-lens p { color: var(--muted); font-size: 0.78rem; margin: 5px 0; }
+    .market-lens strong { color: var(--text); }
     @media (max-width: 900px) {
       .auto-context {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -485,6 +501,7 @@
       font-size: 0.78rem;
       line-height: 1.4;
     }
+    @media (max-width: 900px) { .market-lenses { grid-template-columns: 1fr; } }
     @media print {
       body {
         background: #ffffff;
@@ -541,6 +558,26 @@
         <div class="metric-label">Institutional Gate</div>
         <div class="metric-value" id="gate-short">Fail</div>
       </div>
+    </section>
+
+    <section class="market-lenses" aria-label="Separate ES and ZB market mechanics">
+      <article class="market-lens">
+        <h2>ES lens · equity risk context</h2>
+        <p id="es-session-lens"><strong>Session:</strong> waiting for current time.</p>
+        <p><strong>References:</strong> overnight/prior-day levels, opening range, VWAP, breadth and mega-cap leadership.</p>
+        <p><strong>Role on this page:</strong> flight-to-quality or inflation-regime context—not a permanent inverse signal.</p>
+      </article>
+      <article class="market-lens">
+        <h2>Cross-market regime · ES + ZB</h2>
+        <p id="cross-market-regime"><strong>Regime:</strong> waiting for current ES, ZB and yields.</p>
+        <p id="cross-market-action">Correlation is conditional and must be classified before using ES as confirmation.</p>
+      </article>
+      <article class="market-lens is-primary">
+        <h2>ZB lens · rates mechanics</h2>
+        <p id="zb-driver-lens"><strong>Drivers:</strong> data surprise, auctions and curve direction.</p>
+        <p><strong>Required checks:</strong> actual versus consensus, 2Y/10Y/30Y response, auction timing and post-auction reception.</p>
+        <p><strong>Contract checks:</strong> cheapest-to-deliver, delivery basket and roll state must be verified externally; unavailable inputs cannot pass.</p>
+      </article>
     </section>
 
     <section class="auto-context" id="auto-context">
@@ -1500,6 +1537,33 @@
       };
     }
 
+    function crossMarketRegime(snapshot) {
+      const es = snapshot?.instruments?.ES || {};
+      const zb = snapshot?.instruments?.ZB || {};
+      const esTrend = es.higher_timeframe_trend || es.trend?.result || "Neutral";
+      const zbTrend = zb.higher_timeframe_trend || zb.trend?.result || "Neutral";
+      const rates = snapshot?.rate_context?.result || "Neutral";
+      const esUp = esTrend === "Bullish";
+      const esDown = esTrend === "Bearish";
+      const zbUp = zbTrend === "Bullish";
+      const zbDown = zbTrend === "Bearish";
+      if (esDown && zbUp) return { label: "Growth scare / flight to quality", action: "ES weakness and ZB strength agree. Bond longs have macro support, subject to yields and event risk." };
+      if (esDown && zbDown) return { label: "Inflation scare / hawkish repricing", action: "Stocks and bonds are falling together. Do not treat equity weakness as automatic support for ZB." };
+      if (esUp && zbUp) return { label: "Easing expectations / liquidity support", action: "Stocks and bonds are rising together. Falling yields should confirm an easing-led regime." };
+      if (esUp && zbDown) return { label: "Growth / risk-on rotation", action: "ES strength with ZB weakness suggests growth or higher-yield pressure on duration." };
+      return { label: "Mixed / unconfirmed", action: `ES ${esTrend}; ZB ${zbTrend}; rates ${rates}. Wait for yields or event response to resolve the regime.` };
+    }
+
+    function applyMarketLenses(snapshot) {
+      const regime = crossMarketRegime(snapshot);
+      const esWindow = timeWindowLabel(snapshot, "ES");
+      const zbNews = newsPattern(snapshot, "ZB");
+      setText("es-session-lens", `ES session: ${esWindow}. Use as risk context, not a direct ZB trigger.`);
+      setText("cross-market-regime", `Regime: ${regime.label}.`);
+      setText("cross-market-action", regime.action);
+      setText("zb-driver-lens", `Drivers: ${zbNews.label}. ${zbNews.behavior}`);
+    }
+
     function masterPatternAnalysis(snapshot, context) {
       const instrumentKey = context.name || selectedInstrumentKey();
       const overnight = context.overnight_context || {};
@@ -2240,6 +2304,7 @@
       }
 
       window.renderMarketSelector?.(snapshot);
+      applyMarketLenses(snapshot);
 
       const key = selectedInstrumentKey();
       const context = snapshot.instruments[key];
