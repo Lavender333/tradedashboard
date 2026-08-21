@@ -1178,6 +1178,16 @@
       return `Generated ${eastern} ET (${generated})`;
     }
 
+    function rejectExpiredSnapshot(snapshot) {
+      const generatedKey = etDateKey(snapshotDate(snapshot));
+      const todayKey = etDateKey(new Date());
+      if (generatedKey !== todayKey) {
+        const error = new Error(`Hosted snapshot expired: generated ${generatedKey}, today is ${todayKey}. Wait for today's GitHub Pages refresh before trading.`);
+        error.staleSnapshot = true;
+        throw error;
+      }
+    }
+
     function eventDateKey(event) {
       if (event.date) return event.date;
       const raw = event.datetime || event.starts_at || event.release_at;
@@ -1793,12 +1803,18 @@
         ]);
         if (!response.ok) throw new Error("Snapshot unavailable");
         const snapshot = await response.json();
+        rejectExpiredSnapshot(snapshot);
         if (!Array.isArray(snapshot.economic_calendar)) {
           snapshot.economic_calendar = economicCalendar;
         }
         window.templateSnapshot = snapshot;
         applyTemplateSnapshot(snapshot);
       } catch (error) {
+        if (error.staleSnapshot) {
+          document.getElementById("auto-status").textContent = "Expired";
+          document.getElementById("auto-generated").textContent = error.message;
+          return;
+        }
         const fallback = window.templateSnapshotFallback;
         if (fallback) {
           window.templateSnapshot = fallback;
