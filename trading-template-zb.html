@@ -606,6 +606,11 @@
         <div class="auto-value" id="auto-htf">-</div>
         <div class="auto-note" id="auto-monthly">-</div>
       </div>
+      <div class="auto-item">
+        <div class="auto-label">Gemini Missing Data</div>
+        <div class="auto-value" id="auto-gemini">Not checked</div>
+        <div class="auto-note" id="auto-gemini-note">Gemini can ask for missing inputs, not invent them.</div>
+      </div>
     </section>
 
     <div class="layout">
@@ -2306,6 +2311,29 @@
       setAutoValue("macro-rates-score", snapshot.rate_context?.score ?? "");
     }
 
+    function applyGeminiContext(snapshot) {
+      const context = snapshot.gemini_context;
+      const status = document.getElementById("auto-gemini");
+      const note = document.getElementById("auto-gemini-note");
+      if (!status || !note) return;
+      if (!context) {
+        status.textContent = "Not configured";
+        note.textContent = "Add GEMINI_API_KEY to let Gemini request missing inputs.";
+        return;
+      }
+      const requested = Array.isArray(context.requested_items) ? context.requested_items : [];
+      const answerCount = Array.isArray(context.answers) ? context.answers.length : 0;
+      status.textContent = context.status === "answered"
+        ? `Checked · ${requested.length} missing · ${answerCount} answer${answerCount === 1 ? "" : "s"}`
+        : context.status === "not_configured"
+          ? "Not configured"
+          : context.status === "error"
+            ? "Gemini unavailable"
+            : "Needs data";
+      const firstRequests = requested.slice(0, 3).join(" · ");
+      note.textContent = firstRequests || context.professional_note || context.message || "No missing-data request returned.";
+    }
+
     function applyTemplateSnapshot(snapshot) {
       if (!snapshot || snapshot.error) {
         document.getElementById("auto-status").textContent = "Unavailable";
@@ -2362,6 +2390,7 @@
       setReadout("direction", window.autoDirection);
 
       applyYields(snapshot);
+      applyGeminiContext(snapshot);
       applyMovingAverages(context);
       setAutoValue("daily-trend-score", context.trend.score);
       setAutoValue("weekly-trend-score", context.weekly_trend.score);

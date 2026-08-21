@@ -18,6 +18,7 @@ OUTPUT_JS = Path("data/template-snapshot.js")
 ECONOMIC_CALENDAR = Path("data/economic-calendar.json")
 YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 NASDAQ_ECONOMIC_CALENDAR_URL = "https://api.nasdaq.com/api/calendar/economicevents"
+GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 NASDAQ_HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -47,6 +48,11 @@ SOURCE_CATALOG = {
         "role": "primary source labels for macro events",
         "status": "mapped",
     },
+    "gemini_missing_data": {
+        "label": "Gemini missing-data assistant",
+        "role": "Requests unavailable ES/ZB prices, order flow, volume profile, candles, and gate inputs without inventing them",
+        "status": "optional",
+    },
 }
 
 DATABENTO_DATASET = os.environ.get("DATABENTO_DATASET", "GLBX.MDP3")
@@ -63,6 +69,7 @@ WEBULL_SYMBOLS = {
 ACTIVE_FUTURES_SOURCE = ""
 WEBULL_DATA_CLIENT = None
 CONTRACT_SELECTION = {}
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 ES_RESEARCH_ENGINE = "ES OVERNIGHT-ONLY RESEARCH V1"
 ES_APPROVED_SETUPS = frozenset({
@@ -1291,6 +1298,7 @@ def source_status(events: List[Dict]) -> Dict:
             catalog["futures_prices"]["label"],
             catalog["rates"]["label"],
             catalog["economic_calendar"]["label"],
+            catalog["gemini_missing_data"]["label"] if os.environ.get("GEMINI_API_KEY") else "Gemini missing-data assistant not configured",
         ],
         "catalog": catalog,
         "summary": (
@@ -1402,6 +1410,159 @@ def load_economic_calendar() -> List[Dict]:
     return events
 
 
+def missing_data_inventory(instruments: Dict[str, Dict], selection: Dict) -> Dict:
+    requested = []
+    available = []
+    for name in ("ES", "ZB"):
+        instrument = instruments.get(name, {})
+        auto = instrument.get("automation", {})
+        price = instrument.get("last")
+        data_status = instrument.get("data_status")
+        last_time = instrument.get("last_time_et") or instrument.get("last_time")
+        if auto.get("data_quality_pass"):
+            available.append(f"{name} live price from connected feed: {price} at {last_time}")
+        else:
+            requested.append(f"Exact current {name} price from a live broker/CME-quality source; current snapshot is {data_status} at {last_time}")
+
+        if auto.get("order_flow_connected"):
+            available.append(f"{name} verified order-flow feed is connected")
+        else:
+            requested.append(f"{name} order flow: footprint, DOM, cumulative delta, absorption, and whether buyers are lifting offers or sellers are hitting bids")
+
+        if auto.get("volume_profile_connected"):
+            available.append(f"{name} volume profile is connected")
+        else:
+            requested.append(f"{name} volume profile: POC, VAH, VAL, major high-volume nodes, low-volume rejection zones")
+
+        if auto.get("pattern_confirmed"):
+            available.append(f"{name} live confirmation pattern is present in the connected candle feed")
+        else:
+            requested.append(f"{name} completed 5-minute and 15-minute confirmation candles around the breakout/retest level")
+
+        hard_gates = auto.get("hard_gates") or {}
+        if all(hard_gates.values()) and hard_gates:
+            available.append(f"{name} institutional gate has all required hard checks")
+        else:
+            requested.append(f"{name} institutional gate pass/fail inputs: data quality, market selection, pattern confirmation, actual Trend Pro, order flow, and 2:1 risk/reward")
+
+    return {
+        "requested": requested,
+        "available": available,
+        "market_selection": selection,
+    }
+
+
+def default_gemini_context(instruments: Dict[str, Dict], selection: Dict, status: str, message: str) -> Dict:
+    inventory = missing_data_inventory(instruments, selection)
+    return {
+        "status": status,
+        "model": GEMINI_MODEL,
+        "disclaimer": "Gemini may ask for missing data and analyze provided data, but it must not invent live prices, order flow, volume profile, confirmation candles, or institutional gate status.",
+        "message": message,
+        "requested_items": inventory["requested"],
+        "available_items": inventory["available"],
+        "answers": [],
+        "gate_effect": "No gate override. Missing hard-gate data keeps the institutional gate failed until a connected source supplies it.",
+        "professional_note": "Ask for the missing live inputs first. Use Gemini only as context and checklist support.",
+    }
+
+
+def extract_gemini_text(payload: Dict) -> str:
+    parts = []
+    for candidate in payload.get("candidates") or []:
+        content = candidate.get("content") or {}
+        for part in content.get("parts") or []:
+            text = part.get("text")
+            if text:
+                parts.append(text)
+    return "\n".join(parts).strip()
+
+
+def post_gemini_body(api_key: str, body: Dict) -> Dict:
+    request = Request(
+        GEMINI_GENERATE_URL.format(model=GEMINI_MODEL),
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            **HEADERS,
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=45) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def call_gemini_missing_data(instruments: Dict[str, Dict], selection: Dict, economic_calendar: List[Dict], rate_context: Dict) -> Dict:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return default_gemini_context(instruments, selection, "not_configured", "Set the GEMINI_API_KEY GitHub secret to enable Gemini missing-data questions.")
+
+    inventory = missing_data_inventory(instruments, selection)
+    prompt = {
+        "role": "professional trading data auditor",
+        "instruction": (
+            "You are supporting an ES/ZB trading dashboard. You may request missing data and analyze supplied data. "
+            "Do not invent exact futures prices, order flow, volume profile, live confirmation candles, or institutional gate pass. "
+            "If a value is not supplied or verifiable from your tools, mark it Missing and say exactly what source/input is required. "
+            "Return JSON only."
+        ),
+        "required_json_shape": {
+            "status": "answered | needs_user_data | error",
+            "answers": ["short facts you can answer without inventing"],
+            "requested_items": ["exact missing data Gemini still needs"],
+            "gate_effect": "must say Gemini does not override the institutional gate",
+            "professional_note": "one concise note for the trader",
+        },
+        "known_dashboard_data": {
+            "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "provider": ACTIVE_FUTURES_SOURCE,
+            "market_selection": selection,
+            "rates": rate_context,
+            "calendar": economic_calendar[:12],
+            "instruments": {
+                name: {
+                    "last": item.get("last"),
+                    "last_time": item.get("last_time_et") or item.get("last_time"),
+                    "data_status": item.get("data_status"),
+                    "data_quality_pass": item.get("automation", {}).get("data_quality_pass"),
+                    "trend": item.get("trend"),
+                    "higher_timeframe_trend": item.get("higher_timeframe_trend"),
+                    "hard_gates": item.get("automation", {}).get("hard_gates"),
+                }
+                for name, item in instruments.items()
+            },
+            "missing_inventory": inventory,
+        },
+    }
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": json.dumps(prompt, sort_keys=True)}]}],
+        "tools": [{"google_search": {}}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.2,
+        },
+    }
+    try:
+        try:
+            payload = post_gemini_body(api_key, body)
+        except Exception:
+            body.pop("tools", None)
+            payload = post_gemini_body(api_key, body)
+        text = extract_gemini_text(payload)
+        parsed = json.loads(text) if text else {}
+        if not isinstance(parsed, dict):
+            raise ValueError("Gemini returned non-object JSON")
+        return {
+            **default_gemini_context(instruments, selection, "answered", "Gemini missing-data check complete."),
+            **parsed,
+            "model": GEMINI_MODEL,
+            "disclaimer": "Gemini may ask for missing data and analyze provided data, but it must not invent live prices, order flow, volume profile, confirmation candles, or institutional gate status.",
+        }
+    except Exception as exc:
+        return default_gemini_context(instruments, selection, "error", f"Gemini request failed: {exc}")
+
+
 def safe_build() -> Dict:
     generated_at_dt = datetime.now(timezone.utc)
     generated_at = generated_at_dt.strftime("%Y-%m-%d %H:%M UTC")
@@ -1439,10 +1600,12 @@ def safe_build() -> Dict:
                 "verified_order_flow": bool(auto.get("order_flow_connected")),
                 "risk_reward_2r": bool(auto.get("research_rr2") and auto["research_rr2"] >= 2),
             }
+        gemini_context = call_gemini_missing_data(instruments, selection, economic_calendar, rate_context)
         return {
             "generated_at": generated_at,
             "provider": ACTIVE_FUTURES_SOURCE,
             "data_sources": source_status(economic_calendar),
+            "gemini_context": gemini_context,
             "yields": yields,
             "rate_context": rate_context,
             "economic_calendar": economic_calendar,

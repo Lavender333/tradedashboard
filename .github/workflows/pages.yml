@@ -48,6 +48,8 @@ jobs:
           WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
           WEBULL_ES_SYMBOL: ${{ vars.WEBULL_ES_SYMBOL }}
           WEBULL_ZB_SYMBOL: ${{ vars.WEBULL_ZB_SYMBOL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
           ALLOW_YAHOO_FALLBACK: "true"
         run: python scripts/build_template_snapshot.py
 
