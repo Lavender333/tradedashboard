@@ -1,6 +1,7 @@
 """Build automated market context for the ES/ZB trading template."""
 
 import json
+from snapshot_io import atomic_write, preserve_on_error
 import os
 import re
 import calendar
@@ -35,7 +36,7 @@ SOURCE_CATALOG = {
     },
     "rates": {
         "label": "Yahoo Finance Treasury yield indexes",
-        "role": "2Y/10Y/30Y yield direction",
+        "role": "13-week/10Y/30Y yield direction",
         "status": "dynamic",
     },
     "economic_calendar": {
@@ -147,6 +148,7 @@ def databento_candles(symbol: str, start: datetime, schema: str = "ohlcv-1m") ->
     data = db.Historical(api_key).timeseries.get_range(
         dataset=DATABENTO_DATASET,
         symbols=[symbol],
+        stype_in="continuous" if ".c." in symbol else "raw_symbol",
         schema=schema,
         start=start.isoformat(),
         end=datetime.now(timezone.utc).isoformat(),
@@ -1290,7 +1292,7 @@ def source_status(events: List[Dict]) -> Dict:
     })
     catalog = {key: value.copy() for key, value in SOURCE_CATALOG.items()}
     catalog["futures_prices"]["label"] = ACTIVE_FUTURES_SOURCE
-    catalog["futures_prices"]["status"] = "primary" if ACTIVE_FUTURES_SOURCE.startswith("Databento") else "fallback-delayed"
+    catalog["futures_prices"]["status"] = "primary" if ACTIVE_FUTURES_SOURCE.startswith(("Databento", "Webull")) else "fallback-delayed"
     catalog["economic_calendar"]["events"] = len(events)
     catalog["economic_calendar"]["primary_sources"] = calendar_primary_sources
     return {
@@ -1626,11 +1628,11 @@ def safe_build() -> Dict:
 
 
 def main() -> None:
-    payload = safe_build()
+    payload = preserve_on_error(OUTPUT, safe_build())
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(payload, indent=2, sort_keys=True)
-    OUTPUT.write_text(serialized + "\n", encoding="utf-8")
-    OUTPUT_JS.write_text("window.templateSnapshotFallback = " + serialized + ";\n", encoding="utf-8")
+    atomic_write(OUTPUT, serialized + "\n")
+    atomic_write(OUTPUT_JS, "window.templateSnapshotFallback = " + serialized + ";\n")
 
 
 if __name__ == "__main__":

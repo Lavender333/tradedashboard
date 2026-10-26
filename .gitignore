@@ -5,3 +5,8 @@ node_modules/
 !.env.example
 worker/.dev.vars
 .wrangler/
+
+.venv/
+__pycache__/
+*.pyc
+dist/

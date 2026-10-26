@@ -119,3 +119,24 @@
     }
   };
 })();
+
+(() => {
+  const renderSelection = window.renderMarketSelector;
+  window.renderMarketSelector = function(snapshot) {
+    renderSelection(snapshot);
+    let strip = document.getElementById('quote-feed-status');
+    if (!strip) {
+      strip = document.createElement('p');
+      strip.id = 'quote-feed-status';
+      strip.style.cssText = 'padding:12px;border-radius:8px;background:#f4f0fc;font-size:14px';
+      document.querySelector('main').prepend(strip);
+    }
+    const quotes = Object.values(snapshot.instruments || {}).filter(item => item.live_quote);
+    strip.textContent = quotes.length ? quotes.map(item => {
+      const quote = item.live_quote;
+      const time = new Date(quote.quote_time).toLocaleString('en-US', {timeZone:'America/New_York'});
+      return `${item.name}: ${quote.last} · ${quote.source} · ${quote.delayed ? 'delayed' : 'provider quote'} · ${time} ET`;
+    }).join(' | ') + ' · Indicators use the published candle snapshot.'
+      : 'Quote feed unavailable · showing published candle prices below.';
+  };
+})();

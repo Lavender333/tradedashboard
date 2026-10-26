@@ -15,7 +15,7 @@ RESOLUTION = int(os.environ.get("MES_RESOLUTION_MINUTES", "15"))
 LOOKBACK_HOURS = int(os.environ.get("MES_LOOKBACK_HOURS", "72"))
 ROUND_TO = 5.0
 EXCHANGE_TZ = ZoneInfo("America/New_York")
-DATA_PROVIDER = os.environ.get("MES_DATA_PROVIDER", "databento").lower()
+DATA_PROVIDER = os.environ.get("MES_DATA_PROVIDER", "databento" if os.environ.get("DATABENTO_API_KEY") else "yahoo").lower()
 DATABENTO_DATASET = os.environ.get("DATABENTO_DATASET", "GLBX.MDP3")
 STALE_AFTER_MINUTES = int(os.environ.get("MES_STALE_AFTER_MINUTES", str(RESOLUTION * 3)))
 RTH_START = time(9, 30)
@@ -98,6 +98,7 @@ def fetch_databento_candles() -> pd.DataFrame:
     data = client.timeseries.get_range(
         dataset=DATABENTO_DATASET,
         symbols=[SYMBOL],
+        stype_in="continuous" if ".c." in SYMBOL else "raw_symbol",
         schema="ohlcv-1m",
         start=start.isoformat(),
         end=end.isoformat(),

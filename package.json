@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build:seasonality": "esbuild src/main.tsx --bundle --minify --format=esm --target=es2020 --outfile=assets/seasonality-app.js",
-    "test:schwab-worker": "node worker/test.mjs"
+    "test:schwab-worker": "node worker/test.mjs",
+    "test:browser": "node tests/browser.cjs"
   },
   "dependencies": {
     "react": "^19.1.1",
@@ -12,6 +13,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.8",
-    "wrangler": "^4.121.0"
+    "wrangler": "^4.121.0",
+    "playwright": "1.62.1"
   }
 }

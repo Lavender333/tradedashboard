@@ -3,7 +3,7 @@
 Tools to pull recent Micro E-mini S&P 500 (MES) futures data, compute intraday reference levels, and show a trading bias summary. You can run it as a terminal helper or as a lightweight Flask dashboard ("Lavender mode").
 
 ## Setup
-1. Use Python 3.10+.
+1. Use Python 3.11+.
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
@@ -64,11 +64,11 @@ https://lavender333.github.io/tradedashboard/trading-template-es.html
 https://lavender333.github.io/tradedashboard/trading-template-zb.html
 ```
 
-The ES/ZB template prefers Webull OpenAPI futures data. It automatically selects the active ES and ZB contracts, builds 20-minute candles, and calculates all technicals locally from that single synchronized feed. If Webull is unavailable, Yahoo is an explicitly labeled delayed planning fallback and execution remains blocked.
+The ES/ZB template uses Yahoo Finance delayed data by default. Set the repository variable `TEMPLATE_DATA_PROVIDER=webull` to enable Webull OpenAPI futures data. It automatically selects the active ES and ZB contracts, builds 20-minute candles, and calculates all technicals locally from that single synchronized feed. If Webull is unavailable, Yahoo is an explicitly labeled delayed planning fallback and execution remains blocked.
 
-The dashboard also supports a secure Charles Schwab current-quote overlay through the Cloudflare Worker in [worker/README.md](worker/README.md). OAuth credentials and tokens stay in the Worker; GitHub Pages receives only normalized ES/ZB quote fields. A newer Schwab quote changes the displayed current price but never upgrades the older five-minute strategy calculation snapshot or its execution gate.
+The default hosted quote source is `data/market-quotes.json`, generated from Yahoo alongside the indicator snapshot. No broker or Cloudflare login is required. The dashboard also supports an optional Charles Schwab current-quote overlay through the Cloudflare Worker in [worker/README.md](worker/README.md). OAuth credentials and tokens stay in the Worker; GitHub Pages receives only normalized ES/ZB quote fields. A newer Schwab quote changes the displayed current price but never upgrades the older five-minute strategy calculation snapshot or its execution gate.
 
-The Worker and its KV storage are deployed at `https://lavender-schwab-market-data.antoinetteqwilliams.workers.dev`. It remains disconnected from Schwab until real credentials are entered directly into Cloudflare and OAuth is completed; the dashboard keeps its existing fallback during that state.
+Set `window.LAVENDER_MARKET_API` to the Worker endpoint to opt in to Schwab. The Worker and its KV storage are deployed at `https://lavender-schwab-market-data.antoinetteqwilliams.workers.dev`. It remains disconnected from Schwab until real credentials are entered directly into Cloudflare and OAuth is completed; the dashboard keeps its existing fallback during that state.
 
 Webull setup:
 
@@ -83,7 +83,7 @@ The complete Professional ES template is defined in [ES_PRO_TEMPLATE_RULES_V1.md
 
 When live data passes the quality gate, ES Overnight-Only Research V1 can identify an Overnight High breakout/retest long or Overnight Low breakdown/retest short after 10:00 a.m. ET, but the clean board always labels ES as **SKIP / research only** until a strategy is independently validated. Opening Range and previous-day levels remain visible context and cannot trigger an ES research entry. The recent combined overnight baseline produced PF 1.873 from only 11 trades (+3.082R), while the maximum-history Overnight High long extension produced PF 0.536 from 151 trades (−49.466R) and the separate VWAP–RVOL V1 produced PF 0.628 from 18 trades (−5.357R). Every PF is displayed beside its sample size to prevent a small winning cluster from being mistaken for a durable edge. Delayed fallback data can never publish an executable trade.
 
-ES entries are limited to Monday–Friday, 10:00 a.m.–2:00 p.m. ET; ZB retains its instrument-specific schedule. GitHub requests a new Webull snapshot every five minutes and an open dashboard checks for a newly deployed snapshot every minute. GitHub-hosted schedules and deployments can run late, so the displayed source timestamp and age remain authoritative; snapshots older than seven minutes cannot confirm a trade.
+ES entries are limited to Monday–Friday, 10:00 a.m.–2:00 p.m. ET; ZB retains its instrument-specific schedule. GitHub requests new Yahoo quotes and calculation snapshots every 15 minutes and an open dashboard checks for a newly deployed snapshot every minute. GitHub-hosted schedules and deployments can run late, so the displayed source timestamp and age remain authoritative; snapshots older than seven minutes cannot confirm a trade.
 
 - Daily ES-vs-ZB six-point selection at the 8:10 ET (ZB) and 9:20 ET (ES) checkpoints, using HTF direction, true EMA 20/50 alignment, VWAP, key-level proximity, ATR-normalized target room, and one-to-two completed five-minute closes
 - A `TRADE`, `WATCH`, `WAIT`, or `SKIP BOTH` recommendation before the detailed 100-point worksheet and institutional gate
@@ -115,3 +115,12 @@ For trading-grade data:
 - By default, levels are based on the current or most recent CME equity futures ETH session, with RTH and overnight reference levels included in the snapshot.
 - The dashboard marks data as stale when the latest candle is older than `MES_STALE_AFTER_MINUTES`.
 - Alpha Vantage may rate-limit requests and may not return valid MES futures candles. Use Databento or another futures-capable provider for trading-grade accuracy.
+
+
+## Full local server and verification
+
+Create a Python virtual environment, install `requirements.txt`, then run `python scripts/run_dashboard.py`. The complete site is served at `http://127.0.0.1:8000`, with the MES page at `/mes-dashboard.html` and ES/ZB worksheets at their existing paths. The local quote endpoint fetches Yahoo data with a 60-second cache; indicator snapshots rebuild every 15 minutes. The browser checks every minute. Public Pages updates depend on the GitHub schedule, which can run late.
+
+The homepage calendar, seasonality bundle, trade board, research reports, and worker remain intact. The quote overlay does not make delayed or old calculation data eligible for execution. Yahoo `^IRX` is a 13-week bill yield; the UI labels it accordingly (the legacy internal field remains named `2y`).
+
+Run `python -m unittest discover -s tests -v`, `python scripts/test_es_professional_rules.py`, and `npm run test:schwab-worker`. For browser checks, run `npm install`, `npx playwright install chromium`, start the server, and run `npm run test:browser`. To check static hosting, set `STATIC_QUOTES=1` and `DASHBOARD_URL` to the site URL. The publication workflow runs data checks and refuses to replace the site if a feed build fails or its generation timestamp is old.

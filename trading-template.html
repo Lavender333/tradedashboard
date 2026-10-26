@@ -514,7 +514,7 @@
         <div class="subtitle">v1.0 - Macro, trend, structure, order flow, volatility, and trade plan.</div>
       </div>
       <div class="nav">
-        <a class="button" href="index.html">Live Levels</a>
+        <a class="button" href="mes-dashboard.html">Live Levels</a>
         <a class="button" href="trading-template-es.html">ES Page</a>
         <a class="button" href="trading-template-zb.html">ZB Page</a>
         <button class="button" id="refresh-auto-btn" type="button">Refresh Auto Data</button>
@@ -616,8 +616,8 @@
             <div class="field-group">
               <div class="group-title">Interest Rates</div>
               <div class="field-row">
-                <label><input type="checkbox" data-auto="yield-2y-up"> 2-Year Yield Up</label>
-                <label><input type="checkbox" data-auto="yield-2y-down"> 2-Year Yield Down</label>
+                <label><input type="checkbox" data-auto="yield-2y-up"> 13-Week Treasury Bill Yield Up</label>
+                <label><input type="checkbox" data-auto="yield-2y-down"> 13-Week Treasury Bill Yield Down</label>
                 <label><input type="checkbox" data-auto="yield-10y-up"> 10-Year Yield Up</label>
                 <label><input type="checkbox" data-auto="yield-10y-down"> 10-Year Yield Down</label>
                 <label><input type="checkbox" data-auto="yield-30y-up"> 30-Year Yield Up</label>
@@ -1048,6 +1048,7 @@
 
   <script src="data/template-snapshot.js"></script>
   <script src="market-selector.js"></script>
+  <script src="market-data-client.js"></script>
   <script>
     const scoreGroups = ["macro", "trend", "trendPro", "structure", "volatility", "tradePlan"];
     const maxByGroup = { macro: 20, trend: 35, trendPro: 15, structure: 10, orderFlow: 10, volatility: 5, tradePlan: 5 };
@@ -1104,7 +1105,7 @@
       updateAutomatedGateChecks();
       const checks = Array.from(document.querySelectorAll(".gate-check"));
       const context = window.templateSnapshot?.instruments?.[selectedInstrumentKey()];
-      const stale = context?.data_status === "stale";
+      const stale = context?.data_status !== "live" || !context?.automation?.data_quality_pass;
       const passed = !stale && checks.every((check) => check.checked);
       const missing = gateFailureReasons(checks);
       const missingText = missing.length ? ` Missing: ${missing.join("; ")}.` : "";
@@ -1166,7 +1167,7 @@
     function snapshotDate(snapshot) {
       const generated = snapshot?.generated_at;
       if (!generated) return new Date();
-      const parsed = new Date(generated.replace(" UTC", "Z"));
+      const parsed = new Date(window.MarketDataClient.timestamp(generated));
       return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
     }
 
@@ -1184,13 +1185,7 @@
     }
 
     function rejectExpiredSnapshot(snapshot) {
-      const generatedKey = etDateKey(snapshotDate(snapshot));
-      const todayKey = etDateKey(new Date());
-      if (generatedKey !== todayKey) {
-        const error = new Error(`Hosted snapshot expired: generated ${generatedKey}, today is ${todayKey}. Wait for today's GitHub Pages refresh before trading.`);
-        error.staleSnapshot = true;
-        throw error;
-      }
+      Object.assign(snapshot, window.MarketDataClient.validate(snapshot));
     }
 
     function eventDateKey(event) {
@@ -1822,38 +1817,45 @@
       }
     }
 
+    let automationRefreshInFlight = false;
     async function loadAutomation() {
+      if (automationRefreshInFlight) return;
+      automationRefreshInFlight = true;
+      const button = document.getElementById("refresh-auto-btn");
+      button.disabled = true;
+      button.textContent = "Refreshing…";
       try {
-        document.getElementById("auto-status").textContent = "Refreshing...";
-        document.getElementById("auto-generated").textContent = "Requesting latest market snapshot.";
-        const [response, economicCalendar] = await Promise.all([
-          fetch(dataUrl("data/template-snapshot.json"), { cache: "no-store" }),
+        const [result, economicCalendar] = await Promise.all([
+          window.MarketDataClient.loadSnapshot(dataUrl("data/template-snapshot.json")),
           loadEconomicCalendar()
         ]);
-        if (!response.ok) throw new Error("Snapshot unavailable");
-        const snapshot = await response.json();
-        rejectExpiredSnapshot(snapshot);
-        if (!Array.isArray(snapshot.economic_calendar)) {
-          snapshot.economic_calendar = economicCalendar;
-        }
+        const snapshot = result.snapshot;
+        if (!Array.isArray(snapshot.economic_calendar)) snapshot.economic_calendar = economicCalendar;
         window.templateSnapshot = snapshot;
         applyTemplateSnapshot(snapshot);
-      } catch (error) {
-        if (error.staleSnapshot) {
-          document.getElementById("auto-status").textContent = "Expired";
-          document.getElementById("auto-generated").textContent = error.message;
-          return;
+        const checkedAt = new Date().toLocaleTimeString();
+        document.getElementById("auto-generated").textContent += ` · checked ${checkedAt}`;
+        if (snapshot.refresh_error) {
+          document.getElementById("auto-status").textContent += " · update failed; prior data retained";
+          document.getElementById("auto-generated").textContent += ` · ${snapshot.refresh_error}`;
         }
-        const fallback = window.templateSnapshotFallback;
-        if (fallback) {
+      } catch (error) {
+        try {
+          const fallback = window.MarketDataClient.validate(window.templateSnapshot || window.templateSnapshotFallback);
           window.templateSnapshot = fallback;
           applyTemplateSnapshot(fallback);
-          document.getElementById("auto-generated").textContent =
-            "Hosted refresh unavailable; using bundled snapshot.";
-        } else {
+          document.getElementById("auto-status").textContent += " · refresh unavailable";
+          document.getElementById("auto-generated").textContent += ` · retained published data; ${error.message}`;
+        } catch (_) {
+          window.templateSnapshot = null;
+          updateScores();
           document.getElementById("auto-status").textContent = "Unavailable";
           document.getElementById("auto-generated").textContent = error.message;
         }
+      } finally {
+        automationRefreshInFlight = false;
+        button.disabled = false;
+        button.textContent = "Refresh Auto Data";
       }
     }
 
@@ -1893,7 +1895,9 @@
     function restoreState() {
       const raw = localStorage.getItem("trading-template-v1");
       if (!raw) return;
-      const state = JSON.parse(raw);
+      let state;
+      try { state = JSON.parse(raw); } catch (_) { return; }
+      if (!Array.isArray(state)) return;
       formControls().forEach((control, index) => {
         const saved = state[index];
         if (!saved) return;

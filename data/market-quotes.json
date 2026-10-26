@@ -1,0 +1,23 @@
+{
+  "provider": "Yahoo Finance delayed quotes",
+  "status": "delayed",
+  "generated_at": "2026-10-26T13:34:51.347687+00:00",
+  "instruments": {
+    "ES": {
+      "name": "ES",
+      "symbol": "ES=F",
+      "last": 7680.0,
+      "quote_time": "2026-10-26T13:24:48+00:00",
+      "source": "Yahoo Finance",
+      "delayed": true
+    },
+    "ZB": {
+      "name": "ZB",
+      "symbol": "ZB=F",
+      "last": 107.469,
+      "quote_time": "2026-10-26T13:24:45+00:00",
+      "source": "Yahoo Finance",
+      "delayed": true
+    }
+  }
+}

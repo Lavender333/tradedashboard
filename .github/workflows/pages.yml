@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "5 13 * * 1-5"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Verify dashboard
+        run: |
+          python -m unittest discover -s tests -v
+          python scripts/test_es_professional_rules.py
+
       - name: Build market snapshot
         env:
           MES_DATA_PROVIDER: yahoo
@@ -43,7 +48,7 @@ jobs:
 
       - name: Build template automation snapshot
         env:
-          TEMPLATE_DATA_PROVIDER: webull
+          TEMPLATE_DATA_PROVIDER: ${{ vars.TEMPLATE_DATA_PROVIDER || 'yahoo' }}
           WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
           WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
           WEBULL_ES_SYMBOL: ${{ vars.WEBULL_ES_SYMBOL }}
@@ -53,10 +58,15 @@ jobs:
           ALLOW_YAHOO_FALLBACK: "true"
         run: python scripts/build_template_snapshot.py
 
+      - name: Build and verify quote publication
+        run: |
+          python scripts/build_quotes_snapshot.py
+          python scripts/check_snapshots.py
+
       - name: Prepare static site
         run: |
           mkdir -p dist/data
-          cp index.html trade-board.html trading-template.html trading-template-es.html trading-template-zb.html market-selector.js market-data-client.js .nojekyll dist/
+          cp index.html mes-dashboard.html trade-board.html trading-template.html trading-template-es.html trading-template-zb.html market-selector.js market-data-client.js .nojekyll dist/
           cp -R assets dist/
           cp data/*.json data/*.js dist/data/
 

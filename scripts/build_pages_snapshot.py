@@ -1,6 +1,7 @@
 """Build the static JSON snapshot used by GitHub Pages."""
 
 import json
+from snapshot_io import atomic_write, preserve_on_error
 import os
 import sys
 from datetime import datetime, timezone
@@ -19,22 +20,19 @@ def main() -> None:
 
     from mes_levels import get_snapshot
 
-    generated_at_dt = datetime.now(timezone.utc)
-    generated_at = generated_at_dt.strftime("%Y-%m-%d %H:%M UTC")
-    generated_at_iso = generated_at_dt.isoformat()
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     try:
         payload = get_snapshot()
         payload["generated_at"] = generated_at
-        payload["generated_at_iso"] = generated_at_iso
     except Exception as exc:
         payload = {
             "error": str(exc),
             "generated_at": generated_at,
-            "generated_at_iso": generated_at_iso,
         }
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    payload = preserve_on_error(OUTPUT, payload)
+    atomic_write(OUTPUT, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
 if __name__ == "__main__":

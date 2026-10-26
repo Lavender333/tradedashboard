@@ -531,7 +531,7 @@
         <div class="subtitle">v1.0 - Macro, trend, structure, order flow, volatility, and trade plan.</div>
       </div>
       <div class="nav">
-        <a class="button" href="index.html">Live Levels</a>
+        <a class="button" href="mes-dashboard.html">Live Levels</a>
         <a class="button button-primary" href="trading-template-es.html">ES Page</a>
         <a class="button" href="trading-template-zb.html">ZB Page</a>
         <button class="button" id="refresh-auto-btn" type="button">Refresh Auto Data</button>
@@ -650,8 +650,8 @@
             <div class="field-group">
               <div class="group-title">Interest Rates</div>
               <div class="field-row">
-                <label><input type="checkbox" data-auto="yield-2y-up"> 2-Year Yield Up</label>
-                <label><input type="checkbox" data-auto="yield-2y-down"> 2-Year Yield Down</label>
+                <label><input type="checkbox" data-auto="yield-2y-up"> 13-Week Treasury Bill Yield Up</label>
+                <label><input type="checkbox" data-auto="yield-2y-down"> 13-Week Treasury Bill Yield Down</label>
                 <label><input type="checkbox" data-auto="yield-10y-up"> 10-Year Yield Up</label>
                 <label><input type="checkbox" data-auto="yield-10y-down"> 10-Year Yield Down</label>
                 <label><input type="checkbox" data-auto="yield-30y-up"> 30-Year Yield Up</label>
@@ -1272,7 +1272,7 @@
     function snapshotDate(snapshot) {
       const generated = snapshot?.generated_at;
       if (!generated) return new Date();
-      const parsed = new Date(generated.replace(" UTC", "Z"));
+      const parsed = new Date(window.MarketDataClient.timestamp(generated));
       return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
     }
 
@@ -1307,13 +1307,7 @@
     }
 
     function rejectExpiredSnapshot(snapshot) {
-      const generatedKey = etDateKey(snapshotDate(snapshot));
-      const todayKey = etDateKey(new Date());
-      if (generatedKey !== todayKey) {
-        const error = new Error(`Hosted snapshot expired: generated ${generatedKey}, today is ${todayKey}. Wait for today's GitHub Pages refresh before trading.`);
-        error.staleSnapshot = true;
-        throw error;
-      }
+      Object.assign(snapshot, window.MarketDataClient.validate(snapshot));
     }
 
     function eventDateKey(event) {
@@ -2151,67 +2145,44 @@
     let automationRefreshInFlight = false;
     let loadedAutomationTimestamp = null;
 
-    async function loadAutomation(manual = false) {
+    async function loadAutomation() {
       if (automationRefreshInFlight) return;
       automationRefreshInFlight = true;
       const button = document.getElementById("refresh-auto-btn");
-      const previousSnapshot = window.templateSnapshot;
-      if (manual) {
-        button.disabled = true;
-        button.textContent = "Refreshing…";
-      }
+      button.disabled = true;
+      button.textContent = "Refreshing…";
       try {
-        document.getElementById("auto-status").textContent = "Refreshing...";
-        document.getElementById("auto-generated").textContent = "Requesting latest market snapshot.";
-        const [marketResult, economicCalendar] = await Promise.all([
+        const [result, economicCalendar] = await Promise.all([
           window.MarketDataClient.loadSnapshot(dataUrl("data/template-snapshot.json")),
           loadEconomicCalendar()
         ]);
-        const snapshot = marketResult.snapshot;
-        rejectExpiredSnapshot(snapshot);
-        if (!Array.isArray(snapshot.economic_calendar)) {
-          snapshot.economic_calendar = economicCalendar;
-        }
-        const version = `${snapshot.generated_at}|${snapshot.live_quote_generated_at || ""}`;
-        const changed = loadedAutomationTimestamp !== null && loadedAutomationTimestamp !== version;
-        loadedAutomationTimestamp = version;
+        const snapshot = result.snapshot;
+        if (!Array.isArray(snapshot.economic_calendar)) snapshot.economic_calendar = economicCalendar;
         window.templateSnapshot = snapshot;
         applyTemplateSnapshot(snapshot);
-        const checkedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
-        const generatedText = document.getElementById("auto-generated").textContent;
-        const quoteMessage = marketResult.live ? "Schwab quote checked" : "Schwab unavailable; published calculation snapshot retained";
-        const refreshMessage = manual
-          ? changed ? "New snapshot loaded" : "Already showing the latest published snapshot"
-          : "Automatic check complete";
-        document.getElementById("auto-generated").textContent = `${generatedText} · ${quoteMessage} · ${refreshMessage} · checked ${checkedAt}`;
-        if (manual) {
-          button.textContent = changed ? "New data loaded ✓" : "Latest checked ✓";
-          window.setTimeout(() => { button.textContent = "Refresh Auto Data"; }, 1800);
+        const checkedAt = new Date().toLocaleTimeString();
+        document.getElementById("auto-generated").textContent += ` · checked ${checkedAt}`;
+        if (snapshot.refresh_error) {
+          document.getElementById("auto-status").textContent += " · update failed; prior data retained";
+          document.getElementById("auto-generated").textContent += ` · ${snapshot.refresh_error}`;
         }
       } catch (error) {
-        if (error.staleSnapshot) {
-          document.getElementById("auto-status").textContent = "Expired";
-          document.getElementById("auto-generated").textContent = error.message;
-          if (manual) button.textContent = "Snapshot expired";
-          return;
-        }
-        const fallback = previousSnapshot || window.templateSnapshotFallback;
-        if (fallback && !previousSnapshot) {
+        try {
+          const fallback = window.MarketDataClient.validate(window.templateSnapshot || window.templateSnapshotFallback);
           window.templateSnapshot = fallback;
           applyTemplateSnapshot(fallback);
-          document.getElementById("auto-generated").textContent =
-            "Hosted refresh unavailable; using bundled snapshot.";
-        } else if (previousSnapshot) {
-          document.getElementById("auto-status").textContent = "Refresh failed — prior snapshot retained";
-          document.getElementById("auto-generated").textContent = error.message;
-        } else {
+          document.getElementById("auto-status").textContent += " · refresh unavailable";
+          document.getElementById("auto-generated").textContent += ` · retained published data; ${error.message}`;
+        } catch (_) {
+          window.templateSnapshot = null;
+          updateScores();
           document.getElementById("auto-status").textContent = "Unavailable";
           document.getElementById("auto-generated").textContent = error.message;
         }
-        if (manual) button.textContent = "Refresh failed — retry";
       } finally {
         automationRefreshInFlight = false;
-        if (manual) button.disabled = false;
+        button.disabled = false;
+        button.textContent = "Refresh Auto Data";
       }
     }
 
@@ -2251,7 +2222,9 @@
     function restoreState() {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
-      const state = JSON.parse(raw);
+      let state;
+      try { state = JSON.parse(raw); } catch (_) { return; }
+      if (!Array.isArray(state)) return;
       formControls().forEach((control, index) => {
         const saved = state[index];
         if (!saved) return;
@@ -2293,7 +2266,6 @@
     updateScores();
     loadAutomation();
     window.setInterval(() => loadAutomation(false), 60000);
-    setInterval(loadAutomation, 60000);
   </script>
 </body>
 </html>

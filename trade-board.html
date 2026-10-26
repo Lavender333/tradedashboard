@@ -125,6 +125,7 @@
   }
 
   let loadedSnapshot = null;
+  let lastGoodSnapshot = null;
   let refreshInFlight = false;
 
   async function load(manual = false) {
@@ -138,6 +139,7 @@
     try {
       const result = await window.MarketDataClient.loadSnapshot('data/template-snapshot.json');
       const data = result.snapshot;
+      lastGoodSnapshot = data;
       const version = `${data.generated_at}|${data.live_quote_generated_at || ''}`;
       const changed = loadedSnapshot !== null && loadedSnapshot !== version;
       loadedSnapshot = version;
@@ -158,6 +160,10 @@
         window.setTimeout(() => { button.textContent = 'Refresh price + decision'; }, 1500);
       }
     } catch (error) {
+      if (lastGoodSnapshot) {
+        lastGoodSnapshot = window.MarketDataClient.validate(lastGoodSnapshot);
+        $('#board').innerHTML = ['ES','ZB'].map(name => card(name, lastGoodSnapshot.instruments[name])).join('');
+      }
       if (!loadedSnapshot) {
         $('#board').innerHTML = `<div class="error">Could not load the decision board: ${esc(error.message)}</div>`;
       }
